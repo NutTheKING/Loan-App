@@ -62,7 +62,7 @@ class HomeView extends StatelessWidget {
               // A button to navigate to Loan
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () => GoRouter.of(context).go('/loan'),
+                onPressed: () => GoRouter.of(context).push('/loan'),
                 style: ElevatedButton.styleFrom(minimumSize: Size(double.infinity, 48)),
                 child: const Text('Go to Loan'),
               ),

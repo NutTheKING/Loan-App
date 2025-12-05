@@ -1,27 +1,37 @@
 import 'package:get/get.dart';
-import 'package:go_router/go_router.dart';
-import 'package:loan_app/routers/app_router.dart';
+import 'package:flutter/material.dart';
 
-class AuthController extends GetxController {
-  var isLoading = false.obs;
-  var isLogged = false.obs;
-  final email = ''.obs;
-  final password = ''.obs;
+class SignInController extends GetxController {
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
 
-  void login() async {
-    isLoading.value = true;
-    await Future.delayed(const Duration(seconds: 1));
-    isLogged.value = true;
-    isLoading.value = false;
-    if (email.value == "test" && password.value == "1234") {
-      appRouter.go('/home');
-    }
-    // Navigate to Home
-    // GoRouter.of(Get.context!).go('/home');
+  RxBool hidePassword = true.obs;
+  RxBool loading = false.obs;
+  RxBool loginSuccess = false.obs;
+
+  bool isValid() {
+    return emailController.text.isNotEmpty && passwordController.text.length >= 6;
   }
 
-  void logout() {
-    isLogged.value = false;
-    GoRouter.of(Get.context!).go('/login');
+  Future<void> signIn() async {
+    loading.value = true;
+    loginSuccess.value = false;
+
+    await Future.delayed(const Duration(seconds: 2));
+
+    // Simulate login success
+    if (emailController.text == "test@gmail.com" && passwordController.text == "123456") {
+      loginSuccess.value = true;
+    } else {
+      Get.snackbar(
+        "Login Failed",
+        "Invalid email or password",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+    }
+
+    loading.value = false;
   }
 }

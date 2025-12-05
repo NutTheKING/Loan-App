@@ -29,7 +29,7 @@ class PersonalInfoScreen extends StatelessWidget {
             // Only button needs Obx
             Obx(
               () => ElevatedButton(
-                onPressed: pc.isValid() ? () => context.go("/bonus") : null,
+                onPressed: pc.isValid() ? () => context.push("/bank-account") : null,
                 style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
                 child: const Text("Continue"),
               ),

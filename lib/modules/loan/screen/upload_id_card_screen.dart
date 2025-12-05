@@ -22,7 +22,7 @@ class UploadScreen extends StatelessWidget {
             const SizedBox(height: 30),
             Obx(
               () => ElevatedButton(
-                onPressed: uc.allUploaded() ? () => context.go("/personal-info") : null,
+                onPressed: uc.allUploaded() ? () => context.push("/personal-info") : null,
                 child: const Text("Continue"),
               ),
             ),

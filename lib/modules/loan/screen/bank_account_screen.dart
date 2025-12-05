@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:loan_app/modules/loan/controller/bank_account_controller.dart';
+import 'package:loan_app/modules/loan/controller/loan_controller.dart';
 
 class BankAccountScreen extends StatelessWidget {
   final BankAccountController bc = Get.put(BankAccountController());
+  final LoanController lc = Get.put(LoanController());
 
   BankAccountScreen({super.key});
 
@@ -22,24 +24,32 @@ class BankAccountScreen extends StatelessWidget {
             const SizedBox(height: 30),
             Obx(
               () => ElevatedButton(
-                onPressed: bc.isValid()
+                onPressed: bc.isValid
                     ? () {
                         final bankInfo = bc.buildModel();
 
-                        // Show verification complete popup
-                        Get.defaultDialog(
-                          title: "Verification Complete",
-                          middleText: "Your bank account has been verified successfully.",
-                          textConfirm: "Continue",
-                          onConfirm: () {
-                            Get.back(); // Close dialog
-                            context.go("/dashboard"); // Navigate to final screen
-                          },
+                        showDialog(
+                          context: context,
                           barrierDismissible: false,
+                          builder: (_) => AlertDialog(
+                            title: const Text("Verification Complete"),
+                            content: const Text("Your bank account has been verified successfully."),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context); // close dialog
+                                  context.push(
+                                    "/signature",
+                                    extra: {"amount": lc.amount.value, "period": lc.selectedPeriod.value},
+                                  );
+                                },
+                                child: const Text("Continue"),
+                              ),
+                            ],
+                          ),
                         );
                       }
                     : null,
-                style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
                 child: const Text("Continue"),
               ),
             ),
@@ -52,16 +62,14 @@ class BankAccountScreen extends StatelessWidget {
   Widget _textField(String label, Rx<String> controller, {TextInputType keyboard = TextInputType.text}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Obx(() {
-        return TextField(
-          keyboardType: keyboard,
-          decoration: InputDecoration(
-            labelText: label,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          onChanged: (v) => controller.value = v,
-        );
-      }),
+      child: TextField(
+        keyboardType: keyboard,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        onChanged: (v) => controller.value = v,
+      ),
     );
   }
 }

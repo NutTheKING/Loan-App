@@ -6,15 +6,14 @@ class BankAccountController extends GetxController {
   var accountName = ''.obs;
   var accountNumber = ''.obs;
 
-  bool isValid() {
-    return beneficiaryBank.isNotEmpty && accountName.isNotEmpty && accountNumber.isNotEmpty;
-  }
+  bool get isValid =>
+      beneficiaryBank.value.isNotEmpty && accountName.value.isNotEmpty && accountNumber.value.isNotEmpty;
 
-  BankAccountModel buildModel() {
-    return BankAccountModel(
-      beneficiaryBank: beneficiaryBank.value,
-      accountName: accountName.value,
-      accountNumber: accountNumber.value,
-    );
+  Map<String, dynamic> buildModel() {
+    return {
+      "beneficiaryBank": beneficiaryBank.value,
+      "accountName": accountName.value,
+      "accountNumber": accountNumber.value,
+    };
   }
 }

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:loan_app/modules/loan/controller/loan_controller.dart';
 import 'package:loan_app/routers/app_router.dart';
+import 'package:loan_app/widgets/loan_progress_bar.dart';
 
 class LoanView extends StatelessWidget {
   const LoanView({super.key});
@@ -10,6 +11,51 @@ class LoanView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final LoanController lc = Get.put(LoanController());
+
+    void showAmountInputDialog(BuildContext context) {
+      final TextEditingController inputController = TextEditingController(text: lc.amount.value.toStringAsFixed(0));
+
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text("Enter Loan Amount"),
+            content: TextField(
+              controller: inputController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: "Enter amount between ${lc.minAmount.toInt()} - ${lc.maxAmount.toInt()}",
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context), // Cancel
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final value = double.tryParse(inputController.text);
+                  if (value != null && value >= lc.minAmount && value <= lc.maxAmount) {
+                    lc.changeAmount(value);
+                    Navigator.pop(context); // Close dialog
+                  } else {
+                    // Show error if out of range
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          "Please enter an amount between ${lc.minAmount.toInt()} and ${lc.maxAmount.toInt()}",
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: const Text("Confirm"),
+              ),
+            ],
+          );
+        },
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xffdde6ea),
@@ -23,20 +69,18 @@ class LoanView extends StatelessWidget {
               // -------- Amount Selector --------
               const Text("Loan Amount", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
 
-              Slider(
-                value: lc.amount.value,
-                min: lc.minAmount,
-                max: lc.maxAmount,
-                onChanged: (v) => lc.changeAmount(v),
-              ),
-
-              Center(
-                child: Text(
-                  "₱ ${lc.amount.value.toStringAsFixed(0)}",
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-              ),
-
+              // Slider(
+              //   value: lc.amount.value,
+              //   min: lc.minAmount,
+              //   max: lc.maxAmount,
+              //   onChanged: (v) => lc.changeAmount(v),
+              // ),
+              // Center(
+              //   child: Text(
+              //     "₱ ${lc.amount.value.toStringAsFixed(0)}",
+              //     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              //   ),
+              // ),
               const SizedBox(height: 30),
 
               // ------- Circle Progress ----------
@@ -48,18 +92,46 @@ class LoanView extends StatelessWidget {
                     SizedBox(
                       height: 180,
                       width: 180,
-                      child: CircularProgressIndicator(
-                        value: (lc.amount.value - lc.minAmount) / (lc.maxAmount - lc.minAmount),
-                        strokeWidth: 12,
+                      child: Center(
+                        child: RectDotProgress(
+                          percent: ((lc.amount.value - lc.minAmount) / (lc.maxAmount - lc.minAmount)) * 100,
+                          size: 180,
+                          label: "₱ ${lc.amount.value.toStringAsFixed(0)}",
+                          color: Colors.blue,
+                          backgroundColor: Colors.grey.shade300,
+                        ),
                       ),
                     ),
                     Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Text("Loan Amount"),
-                        Text(
-                          "₱ ${lc.amount.value.toStringAsFixed(0)}",
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                        // Text(
+                        //   "₱ ${lc.amount.value.toStringAsFixed(0)}",
+                        //   style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                        // ),
+                        SizedBox(height: 8),
+                        Center(
+                          child: Obx(
+                            () => GestureDetector(
+                              onTap: () {
+                                showAmountInputDialog(context);
+                              },
+
+                              child: Container(
+                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Color(0xffD3D3D3),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+
+                                child: Text(
+                                  "₱ ${lc.amount.value.toStringAsFixed(0)}",
+                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -136,7 +208,7 @@ class LoanView extends StatelessWidget {
                                       child: const Text("Cancel"),
                                     ),
                                     ElevatedButton(
-                                      onPressed: () => context.go('/upload-id'),
+                                      onPressed: () => context.push('/upload-id'),
                                       child: const Text("Confirm"),
                                     ),
                                   ],
