@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:loan_app/modules/homescreen/controller/home_screen_controller.dart';
 import 'package:loan_app/modules/homescreen/widgets/tips_transaction_widget.dart';
 import 'package:loan_app/modules/homescreen/widgets/visa_card_widget.dart';
+import 'package:loan_app/modules/notification/controller/notification_controller.dart';
 import 'package:loan_app/routers/app_router.dart';
 
 class BankHome extends StatelessWidget {
@@ -12,6 +13,7 @@ class BankHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final homeController = Get.put(HomeController());
+    final notificationController = Get.put(NotificationController());
     final size = MediaQuery.of(context).size;
     final width = size.width;
     final height = size.height;
@@ -46,7 +48,12 @@ class BankHome extends StatelessWidget {
                             "GOTyme",
                             style: TextStyle(fontSize: width * 0.06, fontWeight: FontWeight.bold),
                           ),
-                          Icon(Icons.notifications_none, size: iconSize),
+                          GestureDetector(
+                            onTap: () {
+                              appRouter.push('/notifications', extra: notificationController);
+                            },
+                            child: Icon(Icons.notifications_none, size: 28),
+                          ),
                         ],
                       ),
 
