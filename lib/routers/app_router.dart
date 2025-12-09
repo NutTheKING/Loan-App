@@ -11,6 +11,7 @@ import 'package:loan_app/modules/loan/screen/submit_personal_info_screen.dart';
 import 'package:loan_app/modules/loan/screen/upload_id_card_screen.dart';
 import 'package:loan_app/modules/notification/model/notification_model.dart';
 import 'package:loan_app/modules/notification/screen/notification_screen.dart';
+import 'package:loan_app/modules/profile/screen/personal_information_screen.dart';
 import 'package:loan_app/modules/profile/screen/profile_screen.dart';
 import 'package:loan_app/modules/withdraw_loan/screen/withdraw_loan_screen.dart';
 
@@ -42,6 +43,14 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final data = state.extra as Map;
         return SignatureScreen(loanAmount: data["amount"], period: data["period"]);
+      },
+    ),
+
+    GoRoute(
+      path: '/personal-information',
+      name: 'personal_information',
+      builder: (context, state) {
+        return PersonalInformationScreen();
       },
     ),
   ],

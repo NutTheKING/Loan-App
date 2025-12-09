@@ -111,24 +111,31 @@ class LoanView extends StatelessWidget {
                         //   style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                         // ),
                         SizedBox(height: 8),
+                        Text(
+                          "₱ ${lc.amount.value.toStringAsFixed(0)}",
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 8),
                         Center(
-                          child: Obx(
-                            () => GestureDetector(
-                              onTap: () {
-                                showAmountInputDialog(context);
-                              },
+                          child: GestureDetector(
+                            onTap: () {
+                              showAmountInputDialog(context);
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Color(0xffD3D3D3),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
 
-                              child: Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: Color(0xffD3D3D3),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-
-                                child: Text(
-                                  "₱ ${lc.amount.value.toStringAsFixed(0)}",
-                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                                ),
+                              child: Row(
+                                // mainAxisAlignment: ,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.add_circle_outline_outlined, size: 16),
+                                  SizedBox(width: 4),
+                                  Text("Add Amount", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                ],
                               ),
                             ),
                           ),

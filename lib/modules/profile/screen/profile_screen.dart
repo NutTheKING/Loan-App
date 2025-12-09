@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
 import 'package:loan_app/modules/profile/controller/profile_controller.dart';
 
 class AccountProfileScreen extends StatelessWidget {
@@ -35,7 +36,11 @@ class AccountProfileScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // ---- MENU LIST ----
-            _menuItem(icon: Icons.person, title: "Personal Information", onTap: () => Get.toNamed("/personal-info")),
+            _menuItem(
+              icon: Icons.person,
+              title: "Personal Information",
+              onTap: () => context.push("/personal-information"),
+            ),
 
             _menuItem(icon: Icons.wallet, title: "Limits", onTap: () => Get.toNamed("/limits")),
 

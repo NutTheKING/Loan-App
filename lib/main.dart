@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:loan_app/firebase_options.dart';
+import 'package:loan_app/modules/connection/controller/internet_connection_controller.dart';
+import 'package:loan_app/modules/connection/screen/no_internet_page.dart';
+import 'package:loan_app/modules/connection/services/connectivity_wrapper.dart';
 import 'package:loan_app/routers/app_router.dart';
 import 'package:loan_app/themes/app_theme.dart';
 import 'package:loan_app/utils/local_storage.dart';
@@ -19,6 +22,7 @@ void main() async {
 
   await dotenv.load();
   _setupDevicePreference();
+  Get.put(InternetConnectionController());
   runApp(const MyApp());
 }
 
@@ -48,12 +52,42 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      routeInformationProvider: appRouter.routeInformationProvider,
-      routeInformationParser: appRouter.routeInformationParser,
-      routerDelegate: appRouter.routerDelegate,
-      theme: theme(),
-    );
+    final connection = Get.find<InternetConnectionController>();
+
+    return Obx(() {
+      if (!connection.isConnected.value) {
+        return MaterialApp(debugShowCheckedModeBanner: false, home: NoInternetPage());
+      }
+
+      return GestureDetector(
+        onTap: () => unFocus(context),
+        child: GetMaterialApp.router(
+          debugShowCheckedModeBanner: false,
+          theme: theme(),
+          routeInformationProvider: appRouter.routeInformationProvider,
+          routeInformationParser: appRouter.routeInformationParser,
+          routerDelegate: appRouter.routerDelegate,
+        ),
+      );
+    });
+    // return ConnectivityWrapper(
+    //   child: GetMaterialApp.router(
+    //     debugShowCheckedModeBanner: false,
+    //     routeInformationProvider: appRouter.routeInformationProvider,
+    //     routeInformationParser: appRouter.routeInformationParser,
+    //     routerDelegate: appRouter.routerDelegate,
+    //     theme: theme(),
+    //   ),
+    // );
+  }
+}
+
+void unFocus(BuildContext context) {
+  final FocusScopeNode currentFocus = FocusScope.of(context);
+  // if (!currentFocus.hasPrimaryFocus) {
+  //   currentFocus.unfocus();
+  // }
+  if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
+    FocusManager.instance.primaryFocus!.unfocus();
   }
 }

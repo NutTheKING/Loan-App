@@ -92,6 +92,9 @@ class BankHome extends StatelessWidget {
 
                       SizedBox(height: height * 0.03),
 
+                      DebitCardWidget(),
+
+                      SizedBox(height: height * 0.02),
                       // Cards section
                       _cardContainer(
                         padding: cardPadding,
@@ -153,43 +156,42 @@ class BankHome extends StatelessWidget {
                         ),
                       ),
 
-                      SizedBox(height: height * 0.025),
+                      // SizedBox(height: height * 0.03),
 
                       // Feature Buttons (Responsive)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _cardContainer(
-                              padding: cardPadding,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.phone_android, size: iconSize, color: Colors.blue),
-                                  SizedBox(width: width * 0.02),
-                                  Text("Buy load", style: TextStyle(fontSize: width * 0.04)),
-                                ],
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: width * 0.03),
-                          Expanded(
-                            child: _cardContainer(
-                              padding: cardPadding,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.receipt, size: iconSize, color: Colors.blue),
-                                  SizedBox(width: width * 0.02),
-                                  Text("Pay bills", style: TextStyle(fontSize: width * 0.04)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      SizedBox(height: height * 0.03),
-                      DebitCardWidget(),
+                      // Row(
+                      //   children: [
+                      //     Expanded(
+                      //       child: _cardContainer(
+                      //         padding: cardPadding,
+                      //         child: Row(
+                      //           mainAxisAlignment: MainAxisAlignment.center,
+                      //           children: [
+                      //             Icon(Icons.phone_android, size: iconSize, color: Colors.blue),
+                      //             SizedBox(width: width * 0.02),
+                      //             Text("Buy load", style: TextStyle(fontSize: width * 0.04)),
+                      //           ],
+                      //         ),
+                      //       ),
+                      //     ),
+                      //     SizedBox(width: width * 0.03),
+                      //     Expanded(
+                      //       child: _cardContainer(
+                      //         padding: cardPadding,
+                      //         child: Row(
+                      //           mainAxisAlignment: MainAxisAlignment.center,
+                      //           children: [
+                      //             Icon(Icons.receipt, size: iconSize, color: Colors.blue),
+                      //             SizedBox(width: width * 0.02),
+                      //             Text("Pay bills", style: TextStyle(fontSize: width * 0.04)),
+                      //           ],
+                      //         ),
+                      //       ),
+                      //     ),
+                      //   ],
+                      // ),
+                      SizedBox(height: height * 0.01),
+                      // DebitCardWidget(),
                       TipsAndTransactions(),
                     ],
                   ),

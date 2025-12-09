@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:loan_app/modules/profile/model/personal_information_model.dart';
 import 'package:loan_app/modules/profile/model/profile_model.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -55,5 +56,36 @@ class ProfileController extends GetxController {
   Future<void> loadVersion() async {
     final info = await PackageInfo.fromPlatform();
     appVersion.value = "${info.version} (${info.buildNumber})";
+  }
+
+  Rx<UserProfile> users = UserProfile(
+    profileUrl: "",
+    phoneNumber: "",
+    actualName: "",
+    idCardNumber: "",
+    gender: "",
+    currentJob: "",
+    stableIncome: 0,
+    loanPurpose: "",
+    currentAddress: "",
+    guarantorName: "",
+    guarantorPhone: "",
+    borrowingAmount: 0,
+    months: 0,
+    monthlyPayment: 0,
+  ).obs;
+
+  String get maskedId {
+    if (users.value.showFullId) return users.value.idCardNumber;
+    if (users.value.idCardNumber.length < 4) return "***";
+
+    final last4 = users.value.idCardNumber.substring(users.value.idCardNumber.length - 4);
+    return "*** *** $last4";
+  }
+
+  void toggleShowId() {
+    users.update((u) {
+      u!.showFullId = !u.showFullId;
+    });
   }
 }
