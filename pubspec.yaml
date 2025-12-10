@@ -81,6 +81,8 @@ dependencies:
   package_info_plus: ^9.0.0
   flutter_local_notifications: ^19.5.0
   connectivity_plus: ^7.0.0
+  iconsax: ^0.0.8
+  url_launcher: ^6.3.2
 
   # firebase_core: ^2.13.1
   # firebase_auth: ^4.6.2

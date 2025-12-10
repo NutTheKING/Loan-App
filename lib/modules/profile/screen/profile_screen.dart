@@ -42,13 +42,31 @@ class AccountProfileScreen extends StatelessWidget {
               onTap: () => context.push("/personal-information"),
             ),
 
-            _menuItem(icon: Icons.wallet, title: "Limits", onTap: () => Get.toNamed("/limits")),
+            _menuItem(
+              icon: Icons.wallet,
+              title: "Beneficiary Information",
+              onTap: () => context.push("/beneficiary-information"),
+            ),
 
-            _menuItem(icon: Icons.settings, title: "Settings", onTap: () => Get.toNamed("/settings")),
+            _menuItem(icon: Icons.currency_ruble, title: "Loan Contract", onTap: () => context.push("/loan-contract")),
 
-            _menuItem(icon: Icons.support_agent, title: "Help Center", onTap: () => Get.toNamed("/help-center")),
+            _menuItem(
+              icon: Icons.calendar_month_rounded,
+              title: "Payment Schedule",
+              onTap: () => context.push("/payment-schedule"),
+            ),
 
-            _menuItem(icon: Icons.description, title: "Terms & Conditions", onTap: () => Get.toNamed("/terms")),
+            _menuItem(icon: Icons.timer_outlined, title: "Transactions", onTap: () => context.push("/transactions")),
+
+            _menuItem(icon: Icons.settings, title: "Settings", onTap: () => context.push("/settings")),
+
+            _menuItem(icon: Icons.support_agent, title: "Help Center", onTap: () => context.push("/help-center")),
+
+            _menuItem(
+              icon: Icons.description,
+              title: "Terms & Conditions",
+              onTap: () => context.push("/term-conditions"),
+            ),
 
             const SizedBox(height: 20),
 

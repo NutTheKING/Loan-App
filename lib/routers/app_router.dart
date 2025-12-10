@@ -11,8 +11,15 @@ import 'package:loan_app/modules/loan/screen/submit_personal_info_screen.dart';
 import 'package:loan_app/modules/loan/screen/upload_id_card_screen.dart';
 import 'package:loan_app/modules/notification/model/notification_model.dart';
 import 'package:loan_app/modules/notification/screen/notification_screen.dart';
+import 'package:loan_app/modules/profile/screen/beneficiary_information_screen.dart';
+import 'package:loan_app/modules/profile/screen/help_center_screen.dart';
+import 'package:loan_app/modules/profile/screen/loan_contract_screen.dart';
+import 'package:loan_app/modules/profile/screen/payment_schedule_screen.dart';
 import 'package:loan_app/modules/profile/screen/personal_information_screen.dart';
 import 'package:loan_app/modules/profile/screen/profile_screen.dart';
+import 'package:loan_app/modules/profile/screen/settings_screen.dart';
+import 'package:loan_app/modules/profile/screen/term_condition_screen.dart';
+import 'package:loan_app/modules/profile/screen/transactions_screen.dart';
 import 'package:loan_app/modules/withdraw_loan/screen/withdraw_loan_screen.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -51,6 +58,56 @@ final GoRouter appRouter = GoRouter(
       name: 'personal_information',
       builder: (context, state) {
         return PersonalInformationScreen();
+      },
+    ),
+
+    GoRoute(
+      path: '/beneficiary-information',
+      name: 'beneficiary_information',
+      builder: (context, state) {
+        return BeneficiaryScreen();
+      },
+    ),
+    GoRoute(
+      path: '/loan-contract',
+      name: 'loan_contract',
+      builder: (context, state) {
+        return LoanContractView();
+      },
+    ),
+    GoRoute(
+      path: '/payment-schedule',
+      name: 'payment_schedule',
+      builder: (context, state) {
+        return PaymentScheduleView();
+      },
+    ),
+    GoRoute(
+      path: '/transactions',
+      name: 'transactions',
+      builder: (context, state) {
+        return TransactionsScreen();
+      },
+    ),
+    GoRoute(
+      path: '/settings',
+      name: 'settings',
+      builder: (context, state) {
+        return SettingsScreen();
+      },
+    ),
+    GoRoute(
+      path: '/help-center',
+      name: 'help_center',
+      builder: (context, state) {
+        return HelpCenterScreen();
+      },
+    ),
+    GoRoute(
+      path: '/term-conditions',
+      name: 'term_conditions',
+      builder: (context, state) {
+        return TermsAndConditionsScreen();
       },
     ),
   ],
