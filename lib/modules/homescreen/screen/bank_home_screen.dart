@@ -82,21 +82,25 @@ class BankHome extends StatelessWidget {
 
                       // Action Buttons
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _circleButton("Deposit", Icons.add, circleSize, iconSize),
-                          _circleButton("Send / Transfer", Icons.call_made, circleSize, iconSize),
-                          _circleButton("Scan QR", Icons.qr_code_scanner, circleSize, iconSize),
+                          _circleButton("Deposit", Icons.add, circleSize / 1.5, iconSize, () {
+                            context.push('/deposits');
+                          }),
+                          _circleButton("Send / Transfer", Icons.call_made, circleSize / 1.5, iconSize, () {
+                            context.push('/withdraws');
+                          }),
+                          _circleButton("Scan QR", Icons.qr_code_scanner, circleSize / 1.5, iconSize, () {}),
                         ],
                       ),
 
                       SizedBox(height: height * 0.03),
 
-                      DebitCardWidget(),
-
+                      // DebitCardWidget(),
                       SizedBox(height: height * 0.02),
                       // Cards section
                       _cardContainer(
+                        onTap: () => context.push('/explore-rewards'),
                         padding: cardPadding,
                         child: Center(
                           child: Text(
@@ -109,6 +113,7 @@ class BankHome extends StatelessWidget {
                       SizedBox(height: height * 0.02),
 
                       _cardContainer(
+                        onTap: () => context.push('/go-save-account'),
                         padding: cardPadding,
                         child: Row(
                           children: [
@@ -134,21 +139,25 @@ class BankHome extends StatelessWidget {
                       SizedBox(height: height * 0.02),
 
                       _cardContainer(
+                        onTap: () => context.push('/exchange-rate'),
                         padding: cardPadding,
                         child: Row(
                           children: [
-                            Icon(Icons.watch_later_outlined, size: iconSize * 1.4, color: Colors.blue),
+                            Icon(Icons.currency_exchange_outlined, size: iconSize * 1.4, color: Colors.blue),
                             SizedBox(width: width * 0.04),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    "USD Time Deposit",
+                                    "Exchange Rate",
                                     style: TextStyle(fontSize: width * 0.045, fontWeight: FontWeight.bold),
                                   ),
                                   SizedBox(height: height * 0.005),
-                                  Text("Buy USD, save for a fixed term →", style: TextStyle(fontSize: width * 0.035)),
+                                  Text(
+                                    "The price of one currency expressed",
+                                    style: TextStyle(fontSize: width * 0.035),
+                                  ),
                                 ],
                               ),
                             ),
@@ -156,42 +165,43 @@ class BankHome extends StatelessWidget {
                         ),
                       ),
 
-                      // SizedBox(height: height * 0.03),
+                      SizedBox(height: height * 0.02),
 
                       // Feature Buttons (Responsive)
-                      // Row(
-                      //   children: [
-                      //     Expanded(
-                      //       child: _cardContainer(
-                      //         padding: cardPadding,
-                      //         child: Row(
-                      //           mainAxisAlignment: MainAxisAlignment.center,
-                      //           children: [
-                      //             Icon(Icons.phone_android, size: iconSize, color: Colors.blue),
-                      //             SizedBox(width: width * 0.02),
-                      //             Text("Buy load", style: TextStyle(fontSize: width * 0.04)),
-                      //           ],
-                      //         ),
-                      //       ),
-                      //     ),
-                      //     SizedBox(width: width * 0.03),
-                      //     Expanded(
-                      //       child: _cardContainer(
-                      //         padding: cardPadding,
-                      //         child: Row(
-                      //           mainAxisAlignment: MainAxisAlignment.center,
-                      //           children: [
-                      //             Icon(Icons.receipt, size: iconSize, color: Colors.blue),
-                      //             SizedBox(width: width * 0.02),
-                      //             Text("Pay bills", style: TextStyle(fontSize: width * 0.04)),
-                      //           ],
-                      //         ),
-                      //       ),
-                      //     ),
-                      //   ],
-                      // ),
-                      SizedBox(height: height * 0.01),
-                      // DebitCardWidget(),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _cardContainer(
+                              padding: cardPadding,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.phone_android, size: iconSize, color: Colors.blue),
+                                  SizedBox(width: width * 0.02),
+                                  Text("Buy load", style: TextStyle(fontSize: width * 0.04)),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: width * 0.02),
+                          Expanded(
+                            child: _cardContainer(
+                              padding: cardPadding,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.receipt, size: iconSize, color: Colors.blue),
+                                  SizedBox(width: width * 0.02),
+                                  Text("Pay bills", style: TextStyle(fontSize: width * 0.04)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: height * 0.02),
+                      DebitCardWidget(),
+                      SizedBox(height: height * 0.02),
                       TipsAndTransactions(),
                     ],
                   ),
@@ -230,28 +240,34 @@ class BankHome extends StatelessWidget {
   }
 
   // Circle Buttons
-  Widget _circleButton(String label, IconData icon, double size, double iconSize) {
-    return Column(
-      children: [
-        Container(
-          width: size,
-          height: size,
-          decoration: const BoxDecoration(color: Colors.cyanAccent, shape: BoxShape.circle),
-          child: Icon(icon, size: iconSize * 1.2, color: Colors.black87),
-        ),
-        SizedBox(height: 8),
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-      ],
+  Widget _circleButton(String label, IconData icon, double size, double iconSize, Function()? onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: size,
+            height: size,
+            decoration: const BoxDecoration(color: Colors.cyanAccent, shape: BoxShape.circle),
+            child: Icon(icon, size: iconSize * 1, color: Colors.black87),
+          ),
+          SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
+      ),
     );
   }
 
   // Card container
-  Widget _cardContainer({required Widget child, required double padding}) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(padding),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-      child: child,
+  Widget _cardContainer({required Widget child, required double padding, Function()? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(padding),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+        child: child,
+      ),
     );
   }
 }

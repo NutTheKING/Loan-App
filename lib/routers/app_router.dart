@@ -2,6 +2,10 @@ import 'package:go_router/go_router.dart';
 import 'package:loan_app/auth/login/screen/login_screen.dart';
 import 'package:loan_app/auth/signup/screen/register_screen.dart';
 import 'package:loan_app/auth/splash/screen/splash_screen.dart';
+import 'package:loan_app/modules/deposit/screen/deposit_screen.dart';
+import 'package:loan_app/modules/exchange_rate/screen/exchange_rate_screen.dart';
+import 'package:loan_app/modules/explore_reward/screen/explore_reward_screen.dart';
+import 'package:loan_app/modules/go_save_account/screen/open_go_save_account_screen.dart';
 import 'package:loan_app/modules/homescreen/screen/bank_home_screen.dart';
 import 'package:loan_app/modules/loan/screen/add_more_loan_screen.dart';
 import 'package:loan_app/modules/loan/screen/bank_account_screen.dart';
@@ -20,6 +24,7 @@ import 'package:loan_app/modules/profile/screen/profile_screen.dart';
 import 'package:loan_app/modules/profile/screen/settings_screen.dart';
 import 'package:loan_app/modules/profile/screen/term_condition_screen.dart';
 import 'package:loan_app/modules/profile/screen/transactions_screen.dart';
+import 'package:loan_app/modules/withdraw/screen/withdraw_screen.dart';
 import 'package:loan_app/modules/withdraw_loan/screen/withdraw_loan_screen.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -108,6 +113,41 @@ final GoRouter appRouter = GoRouter(
       name: 'term_conditions',
       builder: (context, state) {
         return TermsAndConditionsScreen();
+      },
+    ),
+    GoRoute(
+      path: '/deposits',
+      name: 'deposits',
+      builder: (context, state) {
+        return DepositScreen();
+      },
+    ),
+    GoRoute(
+      path: '/withdraws',
+      name: 'withdraws',
+      builder: (context, state) {
+        return WithdrawScreen();
+      },
+    ),
+    GoRoute(
+      path: '/explore-rewards',
+      name: 'explore_rewards',
+      builder: (context, state) {
+        return RewardScreen();
+      },
+    ),
+    GoRoute(
+      path: '/go-save-account',
+      name: 'go_save_account',
+      builder: (context, state) {
+        return GoSaveScreen();
+      },
+    ),
+    GoRoute(
+      path: '/exchange-rate',
+      name: 'exchange_rate',
+      builder: (context, state) {
+        return ExchangeScreen();
       },
     ),
   ],
