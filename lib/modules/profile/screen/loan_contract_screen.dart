@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:loan_app/modules/profile/widget/custom_contract_row_widget.dart';
+import 'package:loan_app/modules/profile/widget/custom_contract_text_widget.dart';
+import 'package:loan_app/modules/profile/widget/custome_selection_title_widget.dart';
 
 class LoanContractView extends StatelessWidget {
   const LoanContractView({super.key});
@@ -39,41 +42,43 @@ class LoanContractView extends StatelessWidget {
                   //------------------------------------------------------
                   //                SECTION 1: BORROWER DETAILS
                   //------------------------------------------------------
-                  sectionTitle("Borrower Information"),
-                  contractRow("Full Name", "___________"),
-                  contractRow("Phone Number", "___________"),
-                  contractRow("ID Card", "___________"),
+                  CustomeSelectionTitleWidget(title: "Borrower Information"),
+                  CustomContractRowWidget(label: "Full Name", value: "___________"),
+                  CustomContractRowWidget(label: "Phone Number", value: "___________"),
+                  CustomContractRowWidget(label: "ID Card", value: "___________"),
                   const SizedBox(height: 20),
 
                   //------------------------------------------------------
                   //                SECTION 2: LOAN DETAILS
                   //------------------------------------------------------
-                  sectionTitle("Loan Details"),
-                  contractRow("Loan Amount", "₱ _________"),
-                  contractRow("Loan Period", "___ Months"),
-                  contractRow("Monthly Interest", "0.5%"),
-                  contractRow("Total Interest", "₱ _________"),
-                  contractRow("Monthly Payment", "₱ _________"),
-                  contractRow("Disbursement Date", "___________"),
+                  CustomeSelectionTitleWidget(title: "Loan Details"),
+                  CustomContractRowWidget(label: "Loan Amount", value: "₱ _________"),
+                  CustomContractRowWidget(label: "Loan Period", value: "___ Months"),
+                  CustomContractRowWidget(label: "Monthly Interest", value: "0.5%"),
+                  CustomContractRowWidget(label: "Total Interest", value: "₱ _________"),
+                  CustomContractRowWidget(label: "Monthly Payment", value: "₱ _________"),
+                  CustomContractRowWidget(label: "Disbursement Date", value: "___________"),
                   const SizedBox(height: 20),
 
                   //------------------------------------------------------
                   //                SECTION 3: TERMS
                   //------------------------------------------------------
-                  sectionTitle("Agreement Terms"),
-                  contractText("1. The borrower agrees to repay the loan under the specified terms."),
-                  contractText("2. Late payments may result in penalties as defined by the lender."),
-                  contractText("3. All information provided must be true and accurate."),
-                  contractText("4. The lender reserves the right to take legal action for non-payment."),
-                  contractText("5. Disbursement may take up to 24 hours after approval."),
-                  contractText("6. Interest is calculated monthly based on the outstanding balance."),
+                  CustomeSelectionTitleWidget(title: "Agreement Terms"),
+                  CustomContractTextWidget(text: "1. The borrower agrees to repay the loan under the specified terms."),
+                  CustomContractTextWidget(text: "2. Late payments may result in penalties as defined by the lender."),
+                  CustomContractTextWidget(text: "3. All information provided must be true and accurate."),
+                  CustomContractTextWidget(
+                    text: "4. The lender reserves the right to take legal action for non-payment.",
+                  ),
+                  CustomContractTextWidget(text: "5. Disbursement may take up to 24 hours after approval."),
+                  CustomContractTextWidget(text: "6. Interest is calculated monthly based on the outstanding balance."),
 
                   const SizedBox(height: 20),
 
                   //------------------------------------------------------
                   //                SECTION 4: SIGNATURE AREAS
                   //------------------------------------------------------
-                  sectionTitle("Signatures"),
+                  CustomeSelectionTitleWidget(title: "Signatures"),
 
                   const SizedBox(height: 10),
                   signatureBlock("Borrower Signature"),
@@ -112,40 +117,6 @@ class LoanContractView extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  // --------------------------------------------------------------
-  //                     REUSABLE WIDGETS
-  // --------------------------------------------------------------
-
-  Widget sectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black87),
-      ),
-    );
-  }
-
-  Widget contractRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.black54)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget contractText(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Text(text, style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.4)),
     );
   }
 

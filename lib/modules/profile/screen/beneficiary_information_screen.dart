@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:loan_app/modules/profile/controller/profile_controller.dart';
+import 'package:loan_app/modules/profile/widget/custom_info_row_widget.dart';
 
 class BeneficiaryScreen extends StatelessWidget {
   BeneficiaryScreen({super.key});
@@ -40,18 +41,20 @@ class BeneficiaryScreen extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
-                    infoRow("Full Name", b.fullName),
-                    infoRow("Phone Number", b.phoneNumber),
+                    CustomInfoRowWidget(label: "Full Name", value: b.fullName),
+                    CustomInfoRowWidget(label: "Phone Number", value: b.phoneNumber),
 
                     Row(
                       children: [
-                        Expanded(child: infoRow("ID Card", bc.maskedId)),
+                        Expanded(
+                          child: CustomInfoRowWidget(label: "ID Card", value: bc.maskedId),
+                        ),
                         Switch(value: b.showFullId, onChanged: (_) => bc.toggleId()),
                       ],
                     ),
 
-                    infoRow("Relationship", b.relationship),
-                    infoRow("Address", b.address),
+                    CustomInfoRowWidget(label: "Relationship", value: b.relationship),
+                    CustomInfoRowWidget(label: "Address", value: b.address),
                   ],
                 ),
               ),
@@ -73,25 +76,6 @@ class BeneficiaryScreen extends StatelessWidget {
             ],
           );
         }),
-      ),
-    );
-  }
-
-  Widget infoRow(String label, String value) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Color(0xfff7f9fb),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.black54)),
-          Text(value.isEmpty ? "---" : value, style: const TextStyle(fontWeight: FontWeight.bold)),
-        ],
       ),
     );
   }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:loan_app/modules/profile/controller/profile_controller.dart';
+import 'package:loan_app/modules/profile/widget/custom_color_logout_button_widget.dart';
+import 'package:loan_app/modules/profile/widget/custom_menu_item_widget.dart';
 
 class AccountProfileScreen extends StatelessWidget {
   AccountProfileScreen({super.key});
@@ -36,33 +38,45 @@ class AccountProfileScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // ---- MENU LIST ----
-            _menuItem(
+            CustomMenuItemWidget(
               icon: Icons.person,
               title: "Personal Information",
               onTap: () => context.push("/personal-information"),
             ),
 
-            _menuItem(
+            CustomMenuItemWidget(
               icon: Icons.wallet,
               title: "Beneficiary Information",
               onTap: () => context.push("/beneficiary-information"),
             ),
 
-            _menuItem(icon: Icons.currency_ruble, title: "Loan Contract", onTap: () => context.push("/loan-contract")),
+            CustomMenuItemWidget(
+              icon: Icons.currency_ruble,
+              title: "Loan Contract",
+              onTap: () => context.push("/loan-contract"),
+            ),
 
-            _menuItem(
+            CustomMenuItemWidget(
               icon: Icons.calendar_month_rounded,
               title: "Payment Schedule",
               onTap: () => context.push("/payment-schedule"),
             ),
 
-            _menuItem(icon: Icons.timer_outlined, title: "Transactions", onTap: () => context.push("/transactions")),
+            CustomMenuItemWidget(
+              icon: Icons.timer_outlined,
+              title: "Transactions",
+              onTap: () => context.push("/transactions"),
+            ),
 
-            _menuItem(icon: Icons.settings, title: "Settings", onTap: () => context.push("/settings")),
+            CustomMenuItemWidget(icon: Icons.settings, title: "Settings", onTap: () => context.push("/settings")),
 
-            _menuItem(icon: Icons.support_agent, title: "Help Center", onTap: () => context.push("/help-center")),
+            CustomMenuItemWidget(
+              icon: Icons.support_agent,
+              title: "Help Center",
+              onTap: () => context.push("/help-center"),
+            ),
 
-            _menuItem(
+            CustomMenuItemWidget(
               icon: Icons.description,
               title: "Terms & Conditions",
               onTap: () => context.push("/term-conditions"),
@@ -80,59 +94,13 @@ class AccountProfileScreen extends StatelessWidget {
             //   ),
             //   child: const Text("Logout"),
             // ),
-            colorfulLogoutButton(() => pc.logout()),
+            CustomColorLogoutButtonWidget(onTap: () => pc.logout()),
 
             const SizedBox(height: 20),
 
             // ---- APP VERSION ----
             Center(
               child: Text("Version: ${pc.appVersion.value}", style: TextStyle(color: Colors.grey.shade600)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ---- Reusable Menu Item Widget ----
-  Widget _menuItem({required IconData icon, required String title, required VoidCallback onTap}) {
-    return Card(
-      child: ListTile(
-        leading: Icon(icon, color: Colors.blue),
-        title: Text(title),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: onTap,
-      ),
-    );
-  }
-
-  Widget colorfulLogoutButton(VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 55,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          gradient: const LinearGradient(
-            colors: [
-              Color(0xFFFF6F61), // Coral red
-              Color(0xFFFF8C42), // Orange
-              Color(0xFFFFC857), // Yellow
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [BoxShadow(color: Colors.redAccent.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 4))],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.logout, color: Colors.white, size: 26),
-            SizedBox(width: 10),
-            Text(
-              "Logout",
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
         ),

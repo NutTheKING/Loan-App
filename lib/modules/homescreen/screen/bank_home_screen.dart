@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:loan_app/modules/homescreen/controller/home_screen_controller.dart';
+import 'package:loan_app/modules/homescreen/widget/custom_card_container.dart';
+import 'package:loan_app/modules/homescreen/widget/custom_circle_button.dart';
 import 'package:loan_app/modules/homescreen/widgets/tips_transaction_widget.dart';
 import 'package:loan_app/modules/homescreen/widgets/visa_card_widget.dart';
 import 'package:loan_app/modules/notification/controller/notification_controller.dart';
@@ -84,13 +86,31 @@ class BankHome extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _circleButton("Deposit", Icons.add, circleSize / 1.5, iconSize, () {
-                            context.push('/deposits');
-                          }),
-                          _circleButton("Send / Transfer", Icons.call_made, circleSize / 1.5, iconSize, () {
-                            context.push('/withdraws');
-                          }),
-                          _circleButton("Scan QR", Icons.qr_code_scanner, circleSize / 1.5, iconSize, () {}),
+                          CustomCircleButton(
+                            label: "Deposit",
+                            icon: Icons.add,
+                            size: circleSize / 1.5,
+                            iconSize: iconSize,
+                            onTap: () {
+                              context.push('/deposits');
+                            },
+                          ),
+                          CustomCircleButton(
+                            label: "Send / Transfer",
+                            icon: Icons.call_made,
+                            size: circleSize / 1.5,
+                            iconSize: iconSize,
+                            onTap: () {
+                              context.push('/withdraws');
+                            },
+                          ),
+                          CustomCircleButton(
+                            label: "Scan QR",
+                            icon: Icons.qr_code_scanner,
+                            size: circleSize / 1.5,
+                            iconSize: iconSize,
+                            onTap: () {},
+                          ),
                         ],
                       ),
 
@@ -99,7 +119,7 @@ class BankHome extends StatelessWidget {
                       // DebitCardWidget(),
                       SizedBox(height: height * 0.02),
                       // Cards section
-                      _cardContainer(
+                      CustomeCardWidget(
                         onTap: () => context.push('/explore-rewards'),
                         padding: cardPadding,
                         child: Center(
@@ -112,7 +132,7 @@ class BankHome extends StatelessWidget {
 
                       SizedBox(height: height * 0.02),
 
-                      _cardContainer(
+                      CustomeCardWidget(
                         onTap: () => context.push('/go-save-account'),
                         padding: cardPadding,
                         child: Row(
@@ -138,7 +158,7 @@ class BankHome extends StatelessWidget {
 
                       SizedBox(height: height * 0.02),
 
-                      _cardContainer(
+                      CustomeCardWidget(
                         onTap: () => context.push('/exchange-rate'),
                         padding: cardPadding,
                         child: Row(
@@ -171,7 +191,8 @@ class BankHome extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: _cardContainer(
+                            child: CustomeCardWidget(
+                              onTap: () {},
                               padding: cardPadding,
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -185,7 +206,8 @@ class BankHome extends StatelessWidget {
                           ),
                           SizedBox(width: width * 0.02),
                           Expanded(
-                            child: _cardContainer(
+                            child: CustomeCardWidget(
+                              onTap: () {},
                               padding: cardPadding,
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -235,38 +257,6 @@ class BankHome extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // Circle Buttons
-  Widget _circleButton(String label, IconData icon, double size, double iconSize, Function()? onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: size,
-            height: size,
-            decoration: const BoxDecoration(color: Colors.cyanAccent, shape: BoxShape.circle),
-            child: Icon(icon, size: iconSize * 1, color: Colors.black87),
-          ),
-          SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-
-  // Card container
-  Widget _cardContainer({required Widget child, required double padding, Function()? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(padding),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-        child: child,
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:loan_app/modules/profile/controller/profile_controller.dart';
+import 'package:loan_app/modules/profile/widget/custom_info_tile_widget.dart';
 
 class PersonalInformationScreen extends StatelessWidget {
   final ProfileController pc = Get.put(ProfileController());
@@ -38,54 +39,40 @@ class PersonalInformationScreen extends StatelessWidget {
               const Text("Personal Information", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
 
-              infoTile("Full Name", u.actualName),
-              infoTile("Gender", u.gender),
-              infoTile("Current Job", u.currentJob),
-              infoTile("Stable Income", "₱ ${u.stableIncome}"),
+              CustomInfoTileWidget(title: "Full Name", value: u.actualName),
+              CustomInfoTileWidget(title: "Gender", value: u.gender),
+              CustomInfoTileWidget(title: "Current Job", value: u.currentJob),
+              CustomInfoTileWidget(title: "Stable Income", value: "₱ ${u.stableIncome}"),
 
               // ID card with masking toggle
               Row(
                 children: [
-                  Expanded(child: infoTile("ID Card", pc.maskedId)),
+                  Expanded(
+                    child: CustomInfoTileWidget(title: "ID Card", value: pc.maskedId),
+                  ),
                   Switch(value: u.showFullId, onChanged: (_) => pc.toggleShowId()),
                 ],
               ),
 
-              infoTile("Loan Purpose", u.loanPurpose),
-              infoTile("Address", u.currentAddress),
+              CustomInfoTileWidget(title: "Loan Purpose", value: u.loanPurpose),
+              CustomInfoTileWidget(title: "Address", value: u.currentAddress),
 
               const SizedBox(height: 25),
               const Text("Guarantor", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
 
-              infoTile("Name", u.guarantorName),
-              infoTile("Phone", u.guarantorPhone),
+              CustomInfoTileWidget(title: "Name", value: u.guarantorName),
+              CustomInfoTileWidget(title: "Phone", value: u.guarantorPhone),
 
               const SizedBox(height: 25),
               const Text("Loan Information", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
 
-              infoTile("Borrowing Amount", "₱ ${u.borrowingAmount} / ${u.months} Months"),
-              infoTile("Monthly Payment", "₱ ${u.monthlyPayment}"),
+              CustomInfoTileWidget(title: "Borrowing Amount", value: "₱ ${u.borrowingAmount} / ${u.months} Months"),
+              CustomInfoTileWidget(title: "Monthly Payment", value: "₱ ${u.monthlyPayment}"),
             ],
           );
         }),
-      ),
-    );
-  }
-
-  Widget infoTile(String title, String value) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title, style: const TextStyle(color: Colors.black54)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-        ],
       ),
     );
   }

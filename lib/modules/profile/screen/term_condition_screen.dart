@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:loan_app/modules/profile/widget/custom_selection_text_widget.dart';
 
 class TermsAndConditionsScreen extends StatelessWidget {
   const TermsAndConditionsScreen({super.key});
@@ -27,46 +28,52 @@ class TermsAndConditionsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _sectionTitle(Icons.people_alt, "Eligibility Requirements"),
-                  _sectionText(
-                    "• Applicant must be at least 18 years old.\n"
-                    "• Must provide valid government-issued ID.\n"
-                    "• Must have stable income and contact number.",
+                  CustomSelectionTitleWidget(Icons.people_alt, "Eligibility Requirements"),
+                  CustomSelectionTextWidget(
+                    text:
+                        "• Applicant must be at least 18 years old.\n"
+                        "• Must provide valid government-issued ID.\n"
+                        "• Must have stable income and contact number.",
                   ),
 
-                  _sectionTitle(Icons.percent_rounded, "Interest & Fees"),
-                  _sectionText(
-                    "• Monthly interest rate is 0.5%.\n"
-                    "• Service fee may apply depending on loan amount.\n"
-                    "• All charges will be shown before confirming your loan.",
+                  CustomSelectionTitleWidget(Icons.percent_rounded, "Interest & Fees"),
+                  CustomSelectionTextWidget(
+                    text:
+                        "• Monthly interest rate is 0.5%.\n"
+                        "• Service fee may apply depending on loan amount.\n"
+                        "• All charges will be shown before confirming your loan.",
                   ),
 
-                  _sectionTitle(Icons.schedule, "Loan Period & Repayment"),
-                  _sectionText(
-                    "• Available loan terms: 4, 12, 24, 36 months.\n"
-                    "• Payment must be made on or before the due date.\n"
-                    "• Multiple payment methods are available inside the app.",
+                  CustomSelectionTitleWidget(Icons.schedule, "Loan Period & Repayment"),
+                  CustomSelectionTextWidget(
+                    text:
+                        "• Available loan terms: 4, 12, 24, 36 months.\n"
+                        "• Payment must be made on or before the due date.\n"
+                        "• Multiple payment methods are available inside the app.",
                   ),
 
-                  _sectionTitle(Icons.warning_amber_rounded, "Late Payment Policy"),
-                  _sectionText(
-                    "• Late repayment will incur penalty fees.\n"
-                    "• Repeated late payments may affect future loan eligibility.",
+                  CustomSelectionTitleWidget(Icons.warning_amber_rounded, "Late Payment Policy"),
+                  CustomSelectionTextWidget(
+                    text:
+                        "• Late repayment will incur penalty fees.\n"
+                        "• Repeated late payments may affect future loan eligibility.",
                   ),
 
-                  _sectionTitle(Icons.lock, "Privacy & Data Usage"),
-                  _sectionText(
-                    "• We securely protect your information.\n"
-                    "• Your data will NOT be sold or shared without consent.\n"
-                    "• Used only for loan evaluation and verification.",
+                  CustomSelectionTitleWidget(Icons.lock, "Privacy & Data Usage"),
+                  CustomSelectionTextWidget(
+                    text:
+                        "• We securely protect your information.\n"
+                        "• Your data will NOT be sold or shared without consent.\n"
+                        "• Used only for loan evaluation and verification.",
                   ),
 
-                  _sectionTitle(Icons.check_circle, "Agreement"),
-                  _sectionText(
-                    "By clicking 'I Agree', you confirm that you:\n"
-                    "• Understand all terms and loan conditions.\n"
-                    "• Authorize us to verify your information.\n"
-                    "• Accept your responsibilities as a borrower.",
+                  CustomSelectionTitleWidget(Icons.check_circle, "Agreement"),
+                  CustomSelectionTextWidget(
+                    text:
+                        "By clicking 'I Agree', you confirm that you:\n"
+                        "• Understand all terms and loan conditions.\n"
+                        "• Authorize us to verify your information.\n"
+                        "• Accept your responsibilities as a borrower.",
                   ),
 
                   const SizedBox(height: 120),
@@ -97,7 +104,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
   }
 
   // ---------- SECTION TITLE ----------
-  Widget _sectionTitle(IconData icon, String title) {
+  Widget CustomSelectionTitleWidget(IconData icon, String title) {
     return Padding(
       padding: const EdgeInsets.only(top: 18, bottom: 6),
       child: Row(
@@ -107,14 +114,6 @@ class TermsAndConditionsScreen extends StatelessWidget {
           Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
         ],
       ),
-    );
-  }
-
-  // ---------- SECTION TEXT ----------
-  Widget _sectionText(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 8, bottom: 6),
-      child: Text(text, style: const TextStyle(fontSize: 15, color: Colors.black87, height: 1.5)),
     );
   }
 }

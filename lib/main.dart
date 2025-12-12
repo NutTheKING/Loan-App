@@ -7,7 +7,6 @@ import 'package:get/get.dart';
 import 'package:loan_app/firebase_options.dart';
 import 'package:loan_app/modules/connection/controller/internet_connection_controller.dart';
 import 'package:loan_app/modules/connection/screen/no_internet_page.dart';
-import 'package:loan_app/modules/connection/services/connectivity_wrapper.dart';
 import 'package:loan_app/routers/app_router.dart';
 import 'package:loan_app/themes/app_theme.dart';
 import 'package:loan_app/utils/local_storage.dart';
@@ -63,7 +62,9 @@ class MyApp extends StatelessWidget {
         onTap: () => unFocus(context),
         child: GetMaterialApp.router(
           debugShowCheckedModeBanner: false,
-          theme: theme(),
+          theme: ThemeBase.light(),
+          themeMode: ThemeMode.system,
+          darkTheme: ThemeBase.dark(),
           routeInformationProvider: appRouter.routeInformationProvider,
           routeInformationParser: appRouter.routeInformationParser,
           routerDelegate: appRouter.routerDelegate,

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:loan_app/modules/profile/controller/profile_controller.dart';
+import 'package:loan_app/modules/profile/widget/custom_profile_header_widget.dart';
+import 'package:loan_app/modules/profile/widget/custom_selection_title_widget.dart';
+import 'package:loan_app/modules/profile/widget/custom_setting_tile_widget.dart';
 
 class SettingsScreen extends StatelessWidget {
   final sc = Get.put(ProfileController());
@@ -16,20 +19,20 @@ class SettingsScreen extends StatelessWidget {
         padding: EdgeInsets.all(16),
         children: [
           // 🌟 Profile Header
-          _profileHeader(),
+          CustomProfileHeaderWidget(name: "tinut chan", onEdit: () {}, phone: "+855 96 234 5678"),
 
           SizedBox(height: 20),
 
           // ⚙️ Account Section
-          _sectionTitle("Account"),
-          _settingsTile(Icons.person, "Personal Information"),
-          _settingsTile(Icons.phone_android, "Change Phone Number"),
-          _settingsTile(Icons.lock, "Change Password"),
+          CustomSelectionTitleWidget(title: "Account"),
+          CustomSettingTileWidget(icon: Icons.person, title: "Personal Information"),
+          CustomSettingTileWidget(icon: Icons.phone_android, title: "Change Phone Number"),
+          CustomSettingTileWidget(icon: Icons.lock, title: "Change Password"),
 
           SizedBox(height: 20),
 
           // 🔐 Security
-          _sectionTitle("Security"),
+          CustomSelectionTitleWidget(title: "Security"),
           Obx(
             () => SwitchListTile(
               title: Text("Enable Biometric Lock"),
@@ -38,12 +41,12 @@ class SettingsScreen extends StatelessWidget {
               onChanged: (v) => sc.biometricEnabled.value = v,
             ),
           ),
-          _settingsTile(Icons.pin, "Change PIN Code"),
+          CustomSettingTileWidget(icon: Icons.pin, title: "Change PIN Code"),
 
           SizedBox(height: 20),
 
           // 🔔 Notifications
-          _sectionTitle("Notifications"),
+          CustomSelectionTitleWidget(title: "Notifications"),
           Obx(
             () => SwitchListTile(
               title: Text("Payment Reminders"),
@@ -72,8 +75,8 @@ class SettingsScreen extends StatelessWidget {
           SizedBox(height: 20),
 
           // 🎨 Preferences
-          _sectionTitle("Preferences"),
-          _settingsTile(Icons.language, "Language"),
+          CustomSelectionTitleWidget(title: "Preferences"),
+          CustomSettingTileWidget(icon: Icons.language, title: "Language"),
           Obx(
             () => SwitchListTile(
               title: Text("Dark Mode"),
@@ -86,10 +89,10 @@ class SettingsScreen extends StatelessWidget {
           SizedBox(height: 20),
 
           // 🛟 Support
-          _sectionTitle("Support"),
-          _settingsTile(Icons.help_center, "Help Center"),
-          _settingsTile(Icons.support_agent, "Contact Support"),
-          _settingsTile(Icons.description, "Terms & Conditions"),
+          CustomSelectionTitleWidget(title: "Support"),
+          CustomSettingTileWidget(icon: Icons.help_center, title: "Help Center"),
+          CustomSettingTileWidget(icon: Icons.support_agent, title: "Contact Support"),
+          CustomSettingTileWidget(icon: Icons.description, title: "Terms & Conditions"),
 
           SizedBox(height: 30),
 
@@ -107,56 +110,6 @@ class SettingsScreen extends StatelessWidget {
           SizedBox(height: 40),
         ],
       ),
-    );
-  }
-
-  // 🧑‍💼 Profile Header Widget
-  Widget _profileHeader() {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(16)),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 35,
-            backgroundColor: Colors.blue.shade200,
-            child: Icon(Icons.person, size: 40, color: Colors.white),
-          ),
-          SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Chan Tinut", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              SizedBox(height: 5),
-              Text("+855 96 234 5678", style: TextStyle(color: Colors.grey[700])),
-              SizedBox(height: 8),
-              TextButton(onPressed: () {}, child: Text("Edit Profile")),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 🔧 Section Title
-  Widget _sectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Text(
-        title,
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.blueGrey),
-      ),
-    );
-  }
-
-  // 🧱 Generic Settings Tile
-  Widget _settingsTile(IconData icon, String title) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.blueAccent),
-      title: Text(title),
-      trailing: Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () {},
-      contentPadding: EdgeInsets.zero,
     );
   }
 }
