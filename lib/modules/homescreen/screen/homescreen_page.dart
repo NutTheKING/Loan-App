@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:loan_app/modules/homescreen/controller/home_screen_controller.dart';
+import 'package:loan_app/modules/homescreen/widget/custom_circle_action.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -51,9 +52,9 @@ class HomeView extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _circleAction(Icons.add, 'Deposit'),
-                  _circleAction(Icons.call_made, 'Send'),
-                  _circleAction(Icons.qr_code_scanner, 'Scan'),
+                  CustomeCircleAction(icon:Icons.add, label: 'Deposit'),
+                  CustomeCircleAction(icon: Icons.call_made,label: 'Send'),
+                  CustomeCircleAction(icon: Icons.qr_code_scanner,label: 'Scan'),
                 ],
               ),
               const SizedBox(height: 20),
@@ -78,17 +79,4 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  Widget _circleAction(IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.cyanAccent),
-          child: Icon(icon, size: 26, color: Colors.black87),
-        ),
-        const SizedBox(height: 6),
-        Text(label),
-      ],
-    );
-  }
 }

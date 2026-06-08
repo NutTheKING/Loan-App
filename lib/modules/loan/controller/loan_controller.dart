@@ -1,8 +1,13 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:loan_app/modules/loan/model/loan_model.dart';
 import 'package:loan_app/modules/loan/model/loand_models.dart';
+import 'package:loan_app/modules/loan/model/personal_information.dart';
 import 'package:uuid/uuid.dart';
+import 'dart:typed_data';
+
+import 'package:signature/signature.dart';
 
 class LoanController extends GetxController {
   final ImagePicker _picker = ImagePicker();
@@ -13,7 +18,10 @@ class LoanController extends GetxController {
   var idBackPath = ''.obs;
 
   Future<void> pickFromCamera(String target) async {
-    final XFile? file = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+    final XFile? file = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 80,
+    );
     if (file == null) return;
     if (target == 'selfie') selfiePath.value = file.path;
     if (target == 'id_front') idFrontPath.value = file.path;
@@ -21,7 +29,10 @@ class LoanController extends GetxController {
   }
 
   Future<void> pickFromGallery(String target) async {
-    final XFile? file = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final XFile? file = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
     if (file == null) return;
     if (target == 'selfie') selfiePath.value = file.path;
     if (target == 'id_front') idFrontPath.value = file.path;
@@ -106,4 +117,93 @@ class LoanController extends GetxController {
       disbursementDate: disbursementDate.value,
     );
   }
+
+  // Bank Account controller
+
+  var beneficiaryBank = ''.obs;
+  var accountName = ''.obs;
+  var accountNumber = ''.obs;
+
+  bool get isValid =>
+      beneficiaryBank.value.isNotEmpty &&
+      accountName.value.isNotEmpty &&
+      accountNumber.value.isNotEmpty;
+
+  Map<String, dynamic> buildModel() {
+    return {
+      "beneficiaryBank": beneficiaryBank.value,
+      "accountName": accountName.value,
+      "accountNumber": accountNumber.value,
+    };
+  }
+
+  // Personal Controller
+
+   var actualName = ''.obs;
+  var idCardNo = ''.obs;
+  var currentJob = ''.obs;
+  var gender = ''.obs;
+  var stableIncome = 0.0.obs;
+  var loanPurpose = ''.obs;
+  var currentAddress = ''.obs;
+  var guarantorName = ''.obs;
+  var guarantorPhone = ''.obs;
+
+  bool isPersonalInfoValid() {
+    return actualName.isNotEmpty &&
+        idCardNo.isNotEmpty &&
+        currentJob.isNotEmpty &&
+        gender.isNotEmpty &&
+        stableIncome.value > 0 &&
+        loanPurpose.isNotEmpty &&
+        currentAddress.isNotEmpty &&
+        guarantorName.isNotEmpty &&
+        guarantorPhone.isNotEmpty;
+  }
+
+  PersonalInfoModel buildModels() {
+    return PersonalInfoModel(
+      actualName: actualName.value,
+      idCardNo: idCardNo.value,
+      currentJob: currentJob.value,
+      gender: gender.value,
+      stableIncome: stableIncome.value,
+      loanPurpose: loanPurpose.value,
+      currentAddress: currentAddress.value,
+      guarantorName: guarantorName.value,
+      guarantorPhone: guarantorPhone.value,
+    );
+  }
+
+  // Signature Controller will be separate
+
+    final signatureController = SignatureController(penStrokeWidth: 3, penColor: Color(0xFF202020));
+
+  var signed = false.obs;
+
+  void clearSignature() {
+    signatureController.clear();
+    signed.value = false;
+  }
+
+  Future<void> checkIfSigned() async {
+    final data = await signatureController.toPngBytes();
+    signed.value = data != null && data.isNotEmpty;
+  }
+
+  Future<Uint8List?> exportSignature() async {
+    return await signatureController.toPngBytes();
+  }
+
+  // Upload Image Controller will be separate
+
+  RxString? frontId = RxString('');
+  RxString? backId = RxString('');
+  RxString? selfie = RxString('');
+
+  void setFrontId(String path) => frontId!.value = path;
+  void setBackId(String path) => backId!.value = path;
+  void setSelfie(String path) => selfie!.value = path;
+
+  bool allUploaded() => frontId!.isNotEmpty && backId!.isNotEmpty && selfie!.isNotEmpty;
 }

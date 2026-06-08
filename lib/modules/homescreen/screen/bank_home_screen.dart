@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:loan_app/modules/homescreen/controller/home_screen_controller.dart';
 import 'package:loan_app/modules/homescreen/widget/custom_card_container.dart';
 import 'package:loan_app/modules/homescreen/widget/custom_circle_button.dart';
-import 'package:loan_app/modules/homescreen/widgets/tips_transaction_widget.dart';
-import 'package:loan_app/modules/homescreen/widgets/visa_card_widget.dart';
+import 'package:loan_app/modules/homescreen/widget/tips_transaction_widget.dart';
+import 'package:loan_app/modules/homescreen/widget/visa_card_widget.dart';
 import 'package:loan_app/modules/notification/controller/notification_controller.dart';
 import 'package:loan_app/routers/app_router.dart';
 

@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.loan_app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "29.0.14206865"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -37,6 +37,17 @@ android {
 
 flutter {
     source = "../.."
+}
+
+buildscript {
+  repositories {
+    maven {
+      url = uri("https://maven.guardsquare.com")
+    }
+  }
+  dependencies {
+    classpath("com.guardsquare:plugin:+")
+  }
 }
 
 dependencies {

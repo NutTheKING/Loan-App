@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:loan_app/modules/loan/controller/loan_controller.dart';
+import 'package:loan_app/modules/loan/widget/custom_inforow_widget.dart';
 import 'package:loan_app/routers/app_router.dart';
 import 'package:loan_app/widgets/loan_progress_bar.dart';
 
@@ -29,7 +30,7 @@ class LoanView extends StatelessWidget {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context), // Cancel
+                onPressed: () => appRouter.pop(context), // Cancel
                 child: const Text("Cancel"),
               ),
               ElevatedButton(
@@ -172,12 +173,12 @@ class LoanView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _infoRow("Loan Amount", "₱ ${lc.amount.value.toStringAsFixed(0)}"),
-                    _infoRow("Principal", "₱ ${lc.principal.value.toStringAsFixed(2)}"),
-                    _infoRow("Interest Rate", "0.5% per month"),
-                    _infoRow("Interest Amount", "₱ ${lc.interestAmount.value.toStringAsFixed(2)}"),
-                    _infoRow("Total Payment", "₱ ${lc.paymentAmount.value.toStringAsFixed(2)}"),
-                    _infoRow("Disbursement", "${lc.disbursementDate.value.toLocal()}".split(' ')[0]),
+                    CustomInforowWidget(label: "Loan Amount", value: "₱ ${lc.amount.value.toStringAsFixed(0)}"),
+                    CustomInforowWidget(label: "Principal",value: "₱ ${lc.principal.value.toStringAsFixed(2)}"),
+                    CustomInforowWidget(label: "Interest Rate",value: "0.5% per month"),
+                    CustomInforowWidget(label: "Interest Amount",value: "₱ ${lc.interestAmount.value.toStringAsFixed(2)}"),
+                    CustomInforowWidget(label: "Total Payment",value: "₱ ${lc.paymentAmount.value.toStringAsFixed(2)}"),
+                    CustomInforowWidget(label: "Disbursement",value: "${lc.disbursementDate.value.toLocal()}".split(' ')[0]),
                   ],
                 ),
               ),
@@ -225,7 +226,7 @@ class LoanView extends StatelessWidget {
 
                             // If user confirmed, navigate to next screen
                             if (confirm == true) {
-                              Get.toNamed("/upload-id"); // Safe navigation with GetX
+                              context.goNamed("/upload-id"); // Safe navigation with GetX
                             }
                           }
                         : null,
@@ -244,16 +245,4 @@ class LoanView extends StatelessWidget {
     );
   }
 
-  Widget _infoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 16)),
-          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
 }

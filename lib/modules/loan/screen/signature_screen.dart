@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
-import 'package:loan_app/modules/loan/controller/signature_controller.dart';
+import 'package:loan_app/modules/loan/controller/loan_controller.dart';
 import 'package:signature/signature.dart';
 
 class SignatureScreen extends StatelessWidget {
-  final SignatureControllerX sc = Get.put(SignatureControllerX());
+  final LoanController lc = Get.put(LoanController());
 
   final double loanAmount;
   final int period;
@@ -47,8 +47,8 @@ class SignatureScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: GestureDetector(
-                onPanEnd: (_) => sc.checkIfSigned(),
-                child: Signature(controller: sc.signatureController, backgroundColor: Colors.white),
+                onPanEnd: (_) => lc.checkIfSigned(),
+                child: Signature(controller: lc.signatureController, backgroundColor: Colors.white),
               ),
             ),
 
@@ -56,7 +56,7 @@ class SignatureScreen extends StatelessWidget {
 
             // ------- Reset Button -------
             Row(
-              children: [OutlinedButton(onPressed: () => sc.clearSignature(), child: const Text("Reset Signature"))],
+              children: [OutlinedButton(onPressed: () => lc.clearSignature(), child: const Text("Reset Signature"))],
             ),
 
             const Spacer(),
@@ -66,9 +66,9 @@ class SignatureScreen extends StatelessWidget {
               return SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: sc.signed.value
+                  onPressed: lc.signed.value
                       ? () async {
-                          final data = await sc.exportSignature();
+                          final data = await lc.exportSignature();
                           // save / upload signature
                           print("Signature Saved (${data?.length} bytes)");
 

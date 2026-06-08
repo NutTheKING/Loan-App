@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:loan_app/modules/profile/widget/custom_selectionTitle_widget.dart';
 import 'package:loan_app/modules/profile/widget/custom_selection_text_widget.dart';
 
 class TermsAndConditionsScreen extends StatelessWidget {
@@ -8,7 +9,11 @@ class TermsAndConditionsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xfff4f6f7),
-      appBar: AppBar(title: const Text("Terms & Conditions"), centerTitle: true, elevation: 0),
+      appBar: AppBar(
+        title: const Text("Terms & Conditions"),
+        centerTitle: true,
+        elevation: 0,
+      ),
 
       body: Column(
         children: [
@@ -28,7 +33,10 @@ class TermsAndConditionsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CustomSelectionTitleWidget(Icons.people_alt, "Eligibility Requirements"),
+                  CustomSelectionTitleWidgets(
+                    icon: Icons.people_alt,
+                    title: "Eligibility Requirements",
+                  ),
                   CustomSelectionTextWidget(
                     text:
                         "• Applicant must be at least 18 years old.\n"
@@ -36,7 +44,10 @@ class TermsAndConditionsScreen extends StatelessWidget {
                         "• Must have stable income and contact number.",
                   ),
 
-                  CustomSelectionTitleWidget(Icons.percent_rounded, "Interest & Fees"),
+                  CustomSelectionTitleWidgets(
+                    icon: Icons.percent_rounded,
+                    title: "Interest & Fees",
+                  ),
                   CustomSelectionTextWidget(
                     text:
                         "• Monthly interest rate is 0.5%.\n"
@@ -44,7 +55,10 @@ class TermsAndConditionsScreen extends StatelessWidget {
                         "• All charges will be shown before confirming your loan.",
                   ),
 
-                  CustomSelectionTitleWidget(Icons.schedule, "Loan Period & Repayment"),
+                  CustomSelectionTitleWidgets(
+                    icon: Icons.schedule,
+                    title: "Loan Period & Repayment",
+                  ),
                   CustomSelectionTextWidget(
                     text:
                         "• Available loan terms: 4, 12, 24, 36 months.\n"
@@ -52,14 +66,20 @@ class TermsAndConditionsScreen extends StatelessWidget {
                         "• Multiple payment methods are available inside the app.",
                   ),
 
-                  CustomSelectionTitleWidget(Icons.warning_amber_rounded, "Late Payment Policy"),
+                  CustomSelectionTitleWidgets(
+                    icon: Icons.warning_amber_rounded,
+                    title: "Late Payment Policy",
+                  ),
                   CustomSelectionTextWidget(
                     text:
                         "• Late repayment will incur penalty fees.\n"
                         "• Repeated late payments may affect future loan eligibility.",
                   ),
 
-                  CustomSelectionTitleWidget(Icons.lock, "Privacy & Data Usage"),
+                  CustomSelectionTitleWidgets(
+                    icon: Icons.lock,
+                    title: "Privacy & Data Usage",
+                  ),
                   CustomSelectionTextWidget(
                     text:
                         "• We securely protect your information.\n"
@@ -67,7 +87,10 @@ class TermsAndConditionsScreen extends StatelessWidget {
                         "• Used only for loan evaluation and verification.",
                   ),
 
-                  CustomSelectionTitleWidget(Icons.check_circle, "Agreement"),
+                  CustomSelectionTitleWidgets(
+                    icon: Icons.check_circle,
+                    title: "Agreement",
+                  ),
                   CustomSelectionTextWidget(
                     text:
                         "By clicking 'I Agree', you confirm that you:\n"
@@ -93,25 +116,18 @@ class TermsAndConditionsScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.pop(context);
                 },
-                style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                child: const Text("I Agree", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  "I Agree",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  // ---------- SECTION TITLE ----------
-  Widget CustomSelectionTitleWidget(IconData icon, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 18, bottom: 6),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.blue, size: 22),
-          const SizedBox(width: 8),
-          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
         ],
       ),
     );

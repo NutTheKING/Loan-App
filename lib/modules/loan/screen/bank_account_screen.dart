@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
-import 'package:loan_app/modules/loan/controller/bank_account_controller.dart';
 import 'package:loan_app/modules/loan/controller/loan_controller.dart';
 
 class BankAccountScreen extends StatelessWidget {
-  final BankAccountController bc = Get.put(BankAccountController());
   final LoanController lc = Get.put(LoanController());
 
   BankAccountScreen({super.key});
@@ -18,15 +16,15 @@ class BankAccountScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _textField("Beneficiary Bank", bc.beneficiaryBank),
-            _textField("Account Name", bc.accountName),
-            _textField("Account Number", bc.accountNumber, keyboard: TextInputType.number),
+            _textField("Beneficiary Bank", lc.beneficiaryBank),
+            _textField("Account Name", lc.accountName),
+            _textField("Account Number", lc.accountNumber, keyboard: TextInputType.number),
             const SizedBox(height: 30),
             Obx(
               () => ElevatedButton(
-                onPressed: bc.isValid
+                onPressed: lc.isValid
                     ? () {
-                        final bankInfo = bc.buildModel();
+                        final bankInfo = lc.buildModel();
 
                         showDialog(
                           context: context,

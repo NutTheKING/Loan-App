@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
-import 'package:loan_app/modules/loan/controller/upload_image_controller.dart';
+import 'package:loan_app/modules/loan/controller/loan_controller.dart';
+import 'package:loan_app/modules/loan/widget/custom_upload_button_widget.dart';
 
 class UploadScreen extends StatelessWidget {
-  final UploadController uc = Get.put(UploadController());
+  final LoanController lc = Get.put(LoanController());
 
   UploadScreen({super.key});
 
@@ -16,13 +17,13 @@ class UploadScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _uploadButton("Front ID", () => uc.setFrontId("front_id.png")),
-            _uploadButton("Back ID", () => uc.setBackId("back_id.png")),
-            _uploadButton("Selfie", () => uc.setSelfie("selfie.png")),
+            CustomUploadButtonWidget(label:"Front ID",onUpload:  () => lc.setFrontId("front_id.png")),
+            CustomUploadButtonWidget(label:"Back ID",onUpload:  () => lc.setBackId("back_id.png")),
+            CustomUploadButtonWidget(label:"Selfie",onUpload:  () => lc.setSelfie("selfie.png")),
             const SizedBox(height: 30),
             Obx(
               () => ElevatedButton(
-                onPressed: uc.allUploaded() ? () => context.push("/personal-info") : null,
+                onPressed: lc.allUploaded() ? () => context.push("/personal-info") : null,
                 child: const Text("Continue"),
               ),
             ),
@@ -32,14 +33,14 @@ class UploadScreen extends StatelessWidget {
     );
   }
 
-  Widget _uploadButton(String label, VoidCallback onUpload) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: ElevatedButton(
-        onPressed: onUpload,
-        style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
-        child: Text(label),
-      ),
-    );
-  }
+  // Widget _uploadButton(String label, VoidCallback onUpload) {
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(vertical: 8),
+  //     child: ElevatedButton(
+  //       onPressed: onUpload,
+  //       style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+  //       child: Text(label),
+  //     ),
+  //   );
+  // }
 }

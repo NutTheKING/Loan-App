@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:loan_app/modules/profile/widget/custom_contract_row_widget.dart';
 import 'package:loan_app/modules/profile/widget/custom_contract_text_widget.dart';
+import 'package:loan_app/modules/profile/widget/custom_signature_block_widget.dart';
 import 'package:loan_app/modules/profile/widget/custome_selection_title_widget.dart';
 
 class LoanContractView extends StatelessWidget {
@@ -81,9 +82,9 @@ class LoanContractView extends StatelessWidget {
                   CustomeSelectionTitleWidget(title: "Signatures"),
 
                   const SizedBox(height: 10),
-                  signatureBlock("Borrower Signature"),
+                  CustomSignatureBlockWidget(label:"Borrower Signature"),
                   const SizedBox(height: 25),
-                  signatureBlock("Lender / Company Signature"),
+                  CustomSignatureBlockWidget(label:"Lender / Company Signature"),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -117,23 +118,6 @@ class LoanContractView extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget signatureBlock(String label) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 6),
-        Container(
-          height: 70,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.black54),
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      ],
     );
   }
 }
