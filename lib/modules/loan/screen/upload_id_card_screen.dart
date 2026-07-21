@@ -15,19 +15,33 @@ class UploadScreen extends StatelessWidget {
       appBar: AppBar(title: const Text("Upload Documents")),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            CustomUploadButtonWidget(label:"Front ID",onUpload:  () => lc.setFrontId("front_id.png")),
-            CustomUploadButtonWidget(label:"Back ID",onUpload:  () => lc.setBackId("back_id.png")),
-            CustomUploadButtonWidget(label:"Selfie",onUpload:  () => lc.setSelfie("selfie.png")),
-            const SizedBox(height: 30),
-            Obx(
-              () => ElevatedButton(
-                onPressed: lc.allUploaded() ? () => context.push("/personal-info") : null,
-                child: const Text("Continue"),
+        child: Obx(
+          () => Column(
+            children: [
+              CustomUploadButtonWidget(
+                label: 'Front ID',
+                isUploaded: lc.frontId.value.isNotEmpty,
+                onUpload: () => lc.pickFromGallery('ID_FRONT'),
               ),
-            ),
-          ],
+              CustomUploadButtonWidget(
+                label: 'Back ID',
+                isUploaded: lc.backId.value.isNotEmpty,
+                onUpload: () => lc.pickFromGallery('ID_BACK'),
+              ),
+              CustomUploadButtonWidget(
+                label: 'Selfie',
+                isUploaded: lc.selfie.value.isNotEmpty,
+                onUpload: () => lc.pickFromCamera('SELFIE'),
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: lc.allUploaded()
+                    ? () => context.push('/personal-info')
+                    : null,
+                child: const Text('Continue'),
+              ),
+            ],
+          ),
         ),
       ),
     );

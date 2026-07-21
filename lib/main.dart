@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -17,7 +18,9 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await LocalStorage.init();
   await _handleInitialMessage();
-  await AndroidNotificationHelper.instance.init();
+  if (!kIsWeb) {
+    await AndroidNotificationHelper.instance.init();
+  }
 
   await dotenv.load();
   _setupDevicePreference();
@@ -26,7 +29,8 @@ void main() async {
 }
 
 Future<void> _handleInitialMessage() async {
-  final RemoteMessage? message = await FirebaseMessaging.instance.getInitialMessage();
+  final RemoteMessage? message = await FirebaseMessaging.instance
+      .getInitialMessage();
   String? payload = message?.data['payload'];
   debugPrint('Notification 1');
   if (payload != null) {
@@ -36,13 +40,22 @@ Future<void> _handleInitialMessage() async {
 }
 
 void _setupDevicePreference() {
+  if (kIsWeb) {
+    return;
+  }
   SystemChrome.setSystemUIOverlayStyle(
-    SystemUiOverlayStyle.light.copyWith(systemNavigationBarIconBrightness: Brightness.dark),
+    SystemUiOverlayStyle.light.copyWith(
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
   );
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 }
 
-final GlobalKey<ScaffoldMessengerState> snackBarKey = GlobalKey<ScaffoldMessengerState>();
+final GlobalKey<ScaffoldMessengerState> snackBarKey =
+    GlobalKey<ScaffoldMessengerState>();
 
 final GlobalKey<OverlayState> overlayState = GlobalKey<OverlayState>();
 
@@ -55,7 +68,10 @@ class MyApp extends StatelessWidget {
 
     return Obx(() {
       if (!connection.isConnected.value) {
-        return MaterialApp(debugShowCheckedModeBanner: false, home: NoInternetPage());
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: NoInternetPage(),
+        );
       }
 
       return GestureDetector(

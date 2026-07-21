@@ -26,16 +26,25 @@ class SignatureScreen extends StatelessWidget {
               "Loan Amount: ₱ ${loanAmount.toStringAsFixed(0)}",
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            Text("Loan Period: $period months", style: const TextStyle(fontSize: 16)),
+            Text(
+              "Loan Period: $period months",
+              style: const TextStyle(fontSize: 16),
+            ),
 
             const SizedBox(height: 20),
 
             // ------- View Contract Button -------
-            ElevatedButton(onPressed: () => _showContractDialog(context), child: const Text("View Contract")),
+            ElevatedButton(
+              onPressed: () => _showContractDialog(context),
+              child: const Text("View Contract"),
+            ),
 
             const SizedBox(height: 20),
 
-            const Text("Draw Your Signature:", style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            const Text(
+              "Draw Your Signature:",
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            ),
 
             const SizedBox(height: 8),
 
@@ -48,7 +57,10 @@ class SignatureScreen extends StatelessWidget {
               ),
               child: GestureDetector(
                 onPanEnd: (_) => lc.checkIfSigned(),
-                child: Signature(controller: lc.signatureController, backgroundColor: Colors.white),
+                child: Signature(
+                  controller: lc.signatureController,
+                  backgroundColor: Colors.white,
+                ),
               ),
             ),
 
@@ -56,7 +68,12 @@ class SignatureScreen extends StatelessWidget {
 
             // ------- Reset Button -------
             Row(
-              children: [OutlinedButton(onPressed: () => lc.clearSignature(), child: const Text("Reset Signature"))],
+              children: [
+                OutlinedButton(
+                  onPressed: () => lc.clearSignature(),
+                  child: const Text("Reset Signature"),
+                ),
+              ],
             ),
 
             const Spacer(),
@@ -66,18 +83,24 @@ class SignatureScreen extends StatelessWidget {
               return SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: lc.signed.value
+                  onPressed: lc.signed.value && !lc.applicationSubmitting.value
                       ? () async {
-                          final data = await lc.exportSignature();
-                          // save / upload signature
-                          print("Signature Saved (${data?.length} bytes)");
-
-                          // go next
-                          context.go("/loan");
+                          final submitted = await lc.submitApplication();
+                          if (submitted && context.mounted) {
+                            context.go('/home');
+                          }
                         }
                       : null,
-                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-                  child: const Text("Finish"),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: lc.applicationSubmitting.value
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(),
+                        )
+                      : const Text('Submit application'),
                 ),
               );
             }),
@@ -107,7 +130,10 @@ Thank you.
 """, style: const TextStyle(fontSize: 14)),
         ),
       ),
-      confirm: ElevatedButton(onPressed: () => Get.back(), child: const Text("Close")),
+      confirm: ElevatedButton(
+        onPressed: () => Get.back(),
+        child: const Text("Close"),
+      ),
     );
   }
 }

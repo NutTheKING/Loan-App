@@ -18,9 +18,15 @@ class SignInScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Welcome Back", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+              const Text(
+                "Welcome Back",
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
-              const Text("Sign in to continue", style: TextStyle(fontSize: 16, color: Colors.grey)),
+              const Text(
+                "Sign in to continue",
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
 
               const SizedBox(height: 40),
 
@@ -30,6 +36,7 @@ class SignInScreen extends StatelessWidget {
                 hint: "Enter your email",
                 controller: sc.emailController,
                 keyboard: TextInputType.emailAddress,
+                onChanged: (_) {},
               ),
 
               const SizedBox(height: 20),
@@ -42,9 +49,15 @@ class SignInScreen extends StatelessWidget {
                   decoration: InputDecoration(
                     labelText: "Password",
                     hintText: "Enter your password",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     suffixIcon: IconButton(
-                      icon: Icon(sc.hidePassword.value ? Icons.visibility_off : Icons.visibility),
+                      icon: Icon(
+                        sc.hidePassword.value
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
                       onPressed: () {
                         sc.hidePassword.value = !sc.hidePassword.value;
                       },
@@ -57,7 +70,10 @@ class SignInScreen extends StatelessWidget {
 
               Align(
                 alignment: Alignment.centerRight,
-                child: TextButton(onPressed: () {}, child: const Text("Forgot Password?")),
+                child: TextButton(
+                  onPressed: () {},
+                  child: const Text("Forgot Password?"),
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -68,17 +84,19 @@ class SignInScreen extends StatelessWidget {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: sc.isValid()
+                    onPressed: sc.isValid && !sc.loading.value
                         ? () async {
-                            await sc.signIn();
-                            if (sc.loginSuccess.value) {
+                            final signedIn = await sc.signIn();
+                            if (signedIn && context.mounted) {
                               context.go("/home");
                             }
                           }
                         : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: sc.loading.value
                         ? const CircularProgressIndicator(color: Colors.white)
@@ -91,7 +109,7 @@ class SignInScreen extends StatelessWidget {
 
               Center(
                 child: TextButton(
-                  onPressed: () => context.go("/signup"),
+                  onPressed: () => context.go('/register'),
                   child: const Text("Don't have an account? Sign Up"),
                 ),
               ),
@@ -107,10 +125,12 @@ class SignInScreen extends StatelessWidget {
     required String hint,
     required TextEditingController controller,
     TextInputType keyboard = TextInputType.text,
+    ValueChanged<String>? onChanged,
   }) {
     return TextField(
       controller: controller,
       keyboardType: keyboard,
+      onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,

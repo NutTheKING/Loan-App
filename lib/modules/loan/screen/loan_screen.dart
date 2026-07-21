@@ -14,7 +14,9 @@ class LoanView extends StatelessWidget {
     final LoanController lc = Get.put(LoanController());
 
     void showAmountInputDialog(BuildContext context) {
-      final TextEditingController inputController = TextEditingController(text: lc.amount.value.toStringAsFixed(0));
+      final TextEditingController inputController = TextEditingController(
+        text: lc.amount.value.toStringAsFixed(0),
+      );
 
       showDialog(
         context: context,
@@ -25,7 +27,8 @@ class LoanView extends StatelessWidget {
               controller: inputController,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                hintText: "Enter amount between ${lc.minAmount.toInt()} - ${lc.maxAmount.toInt()}",
+                hintText:
+                    "Enter amount between ${lc.minAmount.toInt()} - ${lc.maxAmount.toInt()}",
               ),
             ),
             actions: [
@@ -36,7 +39,9 @@ class LoanView extends StatelessWidget {
               ElevatedButton(
                 onPressed: () {
                   final value = double.tryParse(inputController.text);
-                  if (value != null && value >= lc.minAmount && value <= lc.maxAmount) {
+                  if (value != null &&
+                      value >= lc.minAmount &&
+                      value <= lc.maxAmount) {
                     lc.changeAmount(value);
                     Navigator.pop(context); // Close dialog
                   } else {
@@ -60,7 +65,11 @@ class LoanView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xffdde6ea),
-      appBar: AppBar(title: const Text("Loan Module"), backgroundColor: const Color(0xffdde6ea), elevation: 0),
+      appBar: AppBar(
+        title: const Text("Loan Module"),
+        backgroundColor: const Color(0xffdde6ea),
+        elevation: 0,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Obx(() {
@@ -68,7 +77,10 @@ class LoanView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // -------- Amount Selector --------
-              const Text("Loan Amount", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                "Loan Amount",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
 
               // Slider(
               //   value: lc.amount.value,
@@ -95,7 +107,10 @@ class LoanView extends StatelessWidget {
                       width: 180,
                       child: Center(
                         child: RectDotProgress(
-                          percent: ((lc.amount.value - lc.minAmount) / (lc.maxAmount - lc.minAmount)) * 100,
+                          percent:
+                              ((lc.amount.value - lc.minAmount) /
+                                  (lc.maxAmount - lc.minAmount)) *
+                              100,
                           size: 180,
                           label: "₱ ${lc.amount.value.toStringAsFixed(0)}",
                           color: Colors.blue,
@@ -114,7 +129,10 @@ class LoanView extends StatelessWidget {
                         SizedBox(height: 8),
                         Text(
                           "₱ ${lc.amount.value.toStringAsFixed(0)}",
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         SizedBox(height: 8),
                         Center(
@@ -123,7 +141,10 @@ class LoanView extends StatelessWidget {
                               showAmountInputDialog(context);
                             },
                             child: Container(
-                              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: Color(0xffD3D3D3),
                                 borderRadius: BorderRadius.circular(8),
@@ -133,9 +154,18 @@ class LoanView extends StatelessWidget {
                                 // mainAxisAlignment: ,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.add_circle_outline_outlined, size: 16),
+                                  Icon(
+                                    Icons.add_circle_outline_outlined,
+                                    size: 16,
+                                  ),
                                   SizedBox(width: 4),
-                                  Text("Add Amount", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  Text(
+                                    "Add Amount",
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -150,7 +180,10 @@ class LoanView extends StatelessWidget {
               const SizedBox(height: 35),
 
               // -------- Period Selector --------
-              const Text("Loan Period", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                "Loan Period",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
 
               Wrap(
                 spacing: 10,
@@ -169,16 +202,39 @@ class LoanView extends StatelessWidget {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CustomInforowWidget(label: "Loan Amount", value: "₱ ${lc.amount.value.toStringAsFixed(0)}"),
-                    CustomInforowWidget(label: "Principal",value: "₱ ${lc.principal.value.toStringAsFixed(2)}"),
-                    CustomInforowWidget(label: "Interest Rate",value: "0.5% per month"),
-                    CustomInforowWidget(label: "Interest Amount",value: "₱ ${lc.interestAmount.value.toStringAsFixed(2)}"),
-                    CustomInforowWidget(label: "Total Payment",value: "₱ ${lc.paymentAmount.value.toStringAsFixed(2)}"),
-                    CustomInforowWidget(label: "Disbursement",value: "${lc.disbursementDate.value.toLocal()}".split(' ')[0]),
+                    CustomInforowWidget(
+                      label: "Loan Amount",
+                      value: "₱ ${lc.amount.value.toStringAsFixed(0)}",
+                    ),
+                    CustomInforowWidget(
+                      label: "Principal",
+                      value: "₱ ${lc.principal.value.toStringAsFixed(2)}",
+                    ),
+                    CustomInforowWidget(
+                      label: "Interest Rate",
+                      value: "0.5% per month",
+                    ),
+                    CustomInforowWidget(
+                      label: "Interest Amount",
+                      value: "₱ ${lc.interestAmount.value.toStringAsFixed(2)}",
+                    ),
+                    CustomInforowWidget(
+                      label: "Total Payment",
+                      value: "₱ ${lc.paymentAmount.value.toStringAsFixed(2)}",
+                    ),
+                    CustomInforowWidget(
+                      label: "Disbursement",
+                      value: "${lc.disbursementDate.value.toLocal()}".split(
+                        ' ',
+                      )[0],
+                    ),
                   ],
                 ),
               ),
@@ -188,8 +244,13 @@ class LoanView extends StatelessWidget {
               // -------- Terms & Condition --------
               Row(
                 children: [
-                  Checkbox(value: lc.agreeTerms.value, onChanged: (v) => lc.agreeTerms.value = v ?? false),
-                  const Expanded(child: Text("I agree to the Terms and Conditions")),
+                  Checkbox(
+                    value: lc.agreeTerms.value,
+                    onChanged: (v) => lc.agreeTerms.value = v ?? false,
+                  ),
+                  const Expanded(
+                    child: Text("I agree to the Terms and Conditions"),
+                  ),
                 ],
               ),
 
@@ -209,14 +270,18 @@ class LoanView extends StatelessWidget {
                               builder: (BuildContext context) {
                                 return AlertDialog(
                                   title: const Text("Confirm Loan"),
-                                  content: const Text("Are you sure you want to request this loan?"),
+                                  content: const Text(
+                                    "Are you sure you want to request this loan?",
+                                  ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.of(context).pop(false),
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(false),
                                       child: const Text("Cancel"),
                                     ),
                                     ElevatedButton(
-                                      onPressed: () => context.push('/upload-id'),
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(true),
                                       child: const Text("Confirm"),
                                     ),
                                   ],
@@ -225,14 +290,16 @@ class LoanView extends StatelessWidget {
                             );
 
                             // If user confirmed, navigate to next screen
-                            if (confirm == true) {
-                              context.goNamed("/upload-id"); // Safe navigation with GetX
+                            if (confirm == true && context.mounted) {
+                              context.go('/upload-id');
                             }
                           }
                         : null,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: const Text("Request Loan"),
                   ),
@@ -244,5 +311,4 @@ class LoanView extends StatelessWidget {
       ),
     );
   }
-
 }

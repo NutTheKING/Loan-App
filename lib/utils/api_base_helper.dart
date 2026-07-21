@@ -1,21 +1,20 @@
 import 'dart:convert';
-// import 'package:get/get_connect.dart';
+
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:loan_app/core/config/app_config.dart';
 import 'package:loan_app/utils/local_storage.dart';
 
 class ErrorModel {
+  const ErrorModel({this.statusCode, this.bodyString});
+
   final int? statusCode;
   final dynamic bodyString;
-  const ErrorModel({this.statusCode, this.bodyString});
 }
 
 enum METHODE { get, post, delete, update }
 
 class ApiBaseHelper {
-  String? baseurl = dotenv.env['base_url'];
-  // String? baseurl = 'https://pre-myproperty.z1platform.com/api/';
   Future<dynamic> onNetworkRequesting({
     required String url,
     Map<String, String>? header,
@@ -24,75 +23,71 @@ class ApiBaseHelper {
     required bool isAuthorize,
     String baseUrl = '',
   }) async {
-    if (baseUrl != '') baseurl = baseUrl;
-    var token = await LocalStorage.getStringValue(key: 'access_token');
-    final fullUrl = baseurl! + url;
-    Map<String, String> headerDefault = {
+    final resolvedBaseUrl =
+        (baseUrl.isNotEmpty ? baseUrl : AppConfig.apiBaseUrl).replaceFirst(
+          RegExp(r'/+$'),
+          '',
+        );
+    final token = await LocalStorage.getStringValue(
+      key: LocalStorage.accessTokenKey,
+    );
+    final requestHeaders = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': isAuthorize ? 'Bearer $token' : '',
+      if (isAuthorize && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      ...?header,
     };
-
-    debugPrint('💎 $fullUrl');
+    final requestUrl = Uri.parse(
+      '$resolvedBaseUrl/${url.replaceFirst(RegExp(r'^/+'), '')}',
+    );
+    debugPrint('API request: $requestUrl');
 
     try {
-      switch (methode) {
-        case METHODE.get:
-          final response = await http.get(Uri.parse(fullUrl), headers: header ?? headerDefault);
-          return _returnResponse(response, fullUrl);
-        case METHODE.post:
-          if (body != null) {
-            final response = await http.post(Uri.parse(fullUrl), body: json.encode(body), headers: headerDefault);
-            debugPrint('RESPONSE :${response.statusCode} ');
-            return _returnResponse(response, fullUrl);
-          }
-          return Future.error(const ErrorModel(bodyString: 'Body must be included'));
-        case METHODE.delete:
-          final response = await http.delete(Uri.parse(fullUrl), headers: headerDefault);
-          return _returnResponse(response);
-        case METHODE.update:
-          if (body != null) {
-            final response = await http.put(Uri.parse(fullUrl), body: json.encode(body), headers: headerDefault);
-            return _returnResponse(response);
-          }
-          return Future.error(const ErrorModel(bodyString: 'Body must be included'));
-        default:
-          break;
-      }
-    } catch (e) {
-      return Future.error(e);
+      final response = switch (methode) {
+        METHODE.get => await http.get(requestUrl, headers: requestHeaders),
+        METHODE.post => await http.post(
+          requestUrl,
+          headers: requestHeaders,
+          body: jsonEncode(body ?? {}),
+        ),
+        METHODE.delete => await http.delete(
+          requestUrl,
+          headers: requestHeaders,
+        ),
+        METHODE.update => await http.put(
+          requestUrl,
+          headers: requestHeaders,
+          body: jsonEncode(body ?? {}),
+        ),
+        null => throw const ErrorModel(
+          bodyString: 'An HTTP method is required.',
+        ),
+      };
+      return _returnResponse(response);
+    } on ErrorModel {
+      rethrow;
+    } catch (error) {
+      return Future.error(error);
     }
   }
 
-  dynamic _returnResponse(response, [String url = '']) {
-    switch (response.statusCode) {
-      case 200:
-        var responseJson = url.contains('goo.gl') || url.contains('google')
-            ? response.body
-            : json.decode(response.body);
-        return responseJson;
-      case 201:
-        var responseJson = json.decode(response.body);
-        return responseJson;
-      case 202:
-        var responseJson = json.decode(response.body);
-        return responseJson;
-      case 404:
-        return Future.error(
-          ErrorModel(
-            statusCode: response.statusCode,
-            bodyString: url.contains('goo.gl') || url.contains('google') ? response.body : json.decode(response.body),
-          ),
-        );
-      case 400:
-        return Future.error(ErrorModel(statusCode: response.statusCode, bodyString: json.decode(response.body)));
-      case 401:
-      case 403:
-        return Future.error(ErrorModel(statusCode: response.statusCode, bodyString: json.decode(response.body)));
-      case 500:
-        break;
-      default:
-        return Future.error(ErrorModel(statusCode: response.statusCode, bodyString: json.decode(response.body)));
+  dynamic _returnResponse(http.Response response) {
+    final responseBody = response.body.isEmpty
+        ? null
+        : _decodeResponse(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return responseBody;
+    }
+    return Future.error(
+      ErrorModel(statusCode: response.statusCode, bodyString: responseBody),
+    );
+  }
+
+  dynamic _decodeResponse(String body) {
+    try {
+      return jsonDecode(body);
+    } on FormatException {
+      return body;
     }
   }
 }

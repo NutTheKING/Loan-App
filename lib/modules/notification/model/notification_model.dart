@@ -1,12 +1,12 @@
 class NotificationModel {
-  int? id;
+  String? id;
   String? title;
   String? body;
   String? payload;
   String? readAt;
   String? createdAt;
   String? updatedAt;
-  int? userId;
+  String? userId;
 
   NotificationModel({
     this.id,

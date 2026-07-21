@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
+
+enum LoanStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum DocumentKind {
+  ID_FRONT
+  ID_BACK
+  SELFIE
+  SIGNATURE
+}
+
+enum PaymentStatus {
+  DUE
+  PAID
+  OVERDUE
+  WAIVED
+}
+
+enum TransactionType {
+  LOAN_DISBURSEMENT
+  REPAYMENT
+  WITHDRAWAL
+  DEPOSIT
+  FEE
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id             String         @id @default(uuid()) @db.Uuid
+  email          String         @unique @db.VarChar(254)
+  passwordHash   String
+  fullName       String
+  idNumber       String?        @unique
+  role           UserRole       @default(CUSTOMER)
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  loans          Loan[]
+  refreshTokens  RefreshToken[]
+  notifications  Notification[]
+  auditEvents    AuditLog[]     @relation("AuditActor")
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid()) @db.Uuid
+  tokenHash   String   @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+  userId      String   @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model Loan {
+  id                   String       @id @default(uuid()) @db.Uuid
+  loanNumber           String       @unique
+  status               LoanStatus   @default(PENDING)
+  currency             String       @default("PHP") @db.VarChar(3)
+  principal            Decimal      @db.Decimal(14, 2)
+  termMonths           Int
+  monthlyInterestRate  Decimal      @db.Decimal(7, 6)
+  interestAmount       Decimal      @db.Decimal(14, 2)
+  totalRepayment       Decimal      @db.Decimal(14, 2)
+  monthlyPayment       Decimal      @db.Decimal(14, 2)
+  acceptedTermsAt      DateTime
+  actualName           String
+  idCardNumber         String
+  currentJob           String
+  gender               String
+  stableIncome         Decimal      @db.Decimal(14, 2)
+  loanPurpose          String
+  currentAddress       String
+  guarantorName        String
+  guarantorPhone       String
+  beneficiaryBank      String
+  accountName          String
+  accountNumber        String
+  reviewerNote         String?
+  reviewedAt           DateTime?
+  disbursedAt          DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  borrowerId           String       @db.Uuid
+  borrower             User         @relation(fields: [borrowerId], references: [id], onDelete: Restrict)
+  documents            LoanDocument[]
+  repayments           Repayment[]
+  transactions         Transaction[]
+
+  @@index([borrowerId, createdAt])
+  @@index([status, createdAt])
+}
+
+model LoanDocument {
+  id          String       @id @default(uuid()) @db.Uuid
+  kind        DocumentKind
+  storageKey  String       @unique
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  createdAt   DateTime     @default(now())
+  loanId      String       @db.Uuid
+  loan        Loan         @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@unique([loanId, kind])
+}
+
+model Repayment {
+  id          String        @id @default(uuid()) @db.Uuid
+  installment Int
+  dueDate     DateTime
+  principal   Decimal       @db.Decimal(14, 2)
+  interest    Decimal       @db.Decimal(14, 2)
+  amountDue   Decimal       @db.Decimal(14, 2)
+  amountPaid  Decimal       @default(0) @db.Decimal(14, 2)
+  paidAt      DateTime?
+  status      PaymentStatus @default(DUE)
+  loanId      String        @db.Uuid
+  loan        Loan          @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@unique([loanId, installment])
+  @@index([loanId, dueDate])
+}
+
+model Transaction {
+  id          String            @id @default(uuid()) @db.Uuid
+  type        TransactionType
+  status      TransactionStatus @default(PENDING)
+  amount      Decimal           @db.Decimal(14, 2)
+  currency    String            @default("PHP") @db.VarChar(3)
+  description String
+  occurredAt  DateTime          @default(now())
+  createdAt   DateTime          @default(now())
+  userId      String            @db.Uuid
+  loanId      String?           @db.Uuid
+  loan        Loan?             @relation(fields: [loanId], references: [id], onDelete: SetNull)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, occurredAt])
+  @@index([loanId, occurredAt])
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String
+  body      String
+  payload   String?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  actorId    String?  @db.Uuid
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+}

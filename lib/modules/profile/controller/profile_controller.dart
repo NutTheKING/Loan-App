@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:loan_app/features/auth/data/auth_api.dart';
 import 'package:loan_app/modules/profile/model/beneficiary_information_model.dart';
 import 'package:loan_app/modules/profile/model/personal_information_model.dart';
 import 'package:loan_app/modules/profile/model/profile_model.dart';
+import 'package:loan_app/routers/app_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -46,9 +48,10 @@ class ProfileController extends GetxController {
       textCancel: "Cancel",
       textConfirm: "Logout",
       confirmTextColor: Colors.white,
-      onConfirm: () {
+      onConfirm: () async {
         Get.back();
-        Get.offAllNamed("/login");
+        await AuthApi().signOut();
+        appRouter.go('/login');
       },
     );
   }
@@ -89,7 +92,9 @@ class ProfileController extends GetxController {
     if (users.value.showFullId) return users.value.idCardNumber;
     if (users.value.idCardNumber.length < 4) return "***";
 
-    final last4 = users.value.idCardNumber.substring(users.value.idCardNumber.length - 4);
+    final last4 = users.value.idCardNumber.substring(
+      users.value.idCardNumber.length - 4,
+    );
     return "*** *** $last4";
   }
 
@@ -99,7 +104,13 @@ class ProfileController extends GetxController {
     });
   }
 
-  final Rx<Beneficiary> b = Beneficiary(fullName: "", phoneNumber: "", idCard: "", relationship: "", address: "").obs;
+  final Rx<Beneficiary> b = Beneficiary(
+    fullName: "",
+    phoneNumber: "",
+    idCard: "",
+    relationship: "",
+    address: "",
+  ).obs;
 
   String get maskedBeneficiaInfoId {
     if (b.value.showFullId) return b.value.idCard;
@@ -120,9 +131,24 @@ class ProfileController extends GetxController {
   var filter = 'All'.obs;
 
   var transactions = [
-    {'type': 'Loan Payment', 'date': '2025-01-10 14:22', 'amount': -3500.0, 'status': 'Success'},
-    {'type': 'Loan Disbursement', 'date': '2025-01-01 09:00', 'amount': 150000.0, 'status': 'Completed'},
-    {'type': 'Late Fee', 'date': '2024-12-29 18:40', 'amount': -200.0, 'status': 'Pending'},
+    {
+      'type': 'Loan Payment',
+      'date': '2025-01-10 14:22',
+      'amount': -3500.0,
+      'status': 'Success',
+    },
+    {
+      'type': 'Loan Disbursement',
+      'date': '2025-01-01 09:00',
+      'amount': 150000.0,
+      'status': 'Completed',
+    },
+    {
+      'type': 'Late Fee',
+      'date': '2024-12-29 18:40',
+      'amount': -200.0,
+      'status': 'Pending',
+    },
   ].obs;
 
   //============ Open telegram ===============
