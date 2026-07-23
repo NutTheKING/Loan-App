@@ -1,124 +1,112 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:loan_app/modules/profile/controller/profile_controller.dart';
-import 'package:loan_app/modules/profile/widget/custom_filter_chip_widget.dart';
-import 'package:loan_app/modules/profile/widget/custom_show_transaction_detail_widget.dart';
-import 'package:loan_app/modules/profile/widget/custom_transaction_card_widget.dart';
+import 'package:loan_app/modules/profile/widget/account_ui.dart';
 
 class TransactionsScreen extends StatelessWidget {
-  final ProfileController tc = Get.put(ProfileController());
-
   TransactionsScreen({super.key});
+
+  final ProfileController controller = ProfileController.ensure();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Transactions"), centerTitle: true),
-
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+    return Obx(
+      () => AccountPage(
+        title: 'Transactions',
+        onRefresh: controller.loadAccount,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
           children: [
-            // 🔍 Search Bar
-            TextField(
-              decoration: InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: "Search transactions",
-                filled: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-
-            SizedBox(height: 12),
-
-            // 🏷 Filter Chips
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                CustomFilterChipWidget(label: "All", selectedValue: tc.filter),
-                CustomFilterChipWidget(label: "This Week", selectedValue: tc.filter),
-                CustomFilterChipWidget(label: "This Month", selectedValue: tc.filter),
-                CustomFilterChipWidget(label: "Toda Year", selectedValue: tc.filter),
-              ],
-            ),
-
-            SizedBox(height: 16),
-
-            // 📋 Transaction List
-            Expanded(
-              child: Obx(
-                () => ListView.builder(
-                  itemCount: tc.transactions.length,
-                  itemBuilder: (_, i) {
-                    final t = tc.transactions[i];
-                    return CustomTransactionCardWidget(
-                      type: t['type'].toString(),
-                      date: t['date'].toString(),
-                      amount: double.tryParse(t['amount'].toString()) ?? 0.0,
-                      status: t['status'].toString(),
-                      onTap: () => TransactionDetail(transaction: t),
-                    );
-                  },
-                ),
-              ),
-            ),
+            if (controller.transactions.isEmpty)
+              const AccountEmptyState(
+                icon: Icons.receipt_long_outlined,
+                title: 'No transactions yet',
+                message:
+                    'Loan disbursements and repayments will appear here automatically.',
+              )
+            else
+              ...controller.transactions.map((transaction) {
+                final type = '${transaction['type'] ?? ''}'.toUpperCase();
+                final incoming = _isIncoming(type);
+                final outgoing = _isOutgoing(type);
+                final movementColor = incoming
+                    ? const Color(0xFF12B76A)
+                    : outgoing
+                    ? const Color(0xFFF04438)
+                    : Theme.of(context).colorScheme.primary;
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    leading: CircleAvatar(
+                      backgroundColor: movementColor.withValues(alpha: .14),
+                      child: Icon(_transactionIcon(type), color: movementColor),
+                    ),
+                    title: Text(
+                      '${transaction['description'] ?? transaction['type'] ?? 'Transaction'}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(_date(transaction['occurredAt'])),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${incoming
+                              ? '+'
+                              : outgoing
+                              ? '-'
+                              : ''}${_currency(transaction['amount'])}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: movementColor,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        StatusPill(
+                          status: '${transaction['status'] ?? 'PENDING'}',
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
           ],
         ),
       ),
     );
   }
+}
 
-  // 📄 Bottom Sheet – Details
-  // void _showTransactionDetail(Map t) {
-  //   Get.bottomSheet(
-  //     Container(
-  //       padding: EdgeInsets.all(20),
-  //       decoration: BoxDecoration(
-  //         color: Colors.white,
-  //         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-  //       ),
-  //       child: Column(
-  //         mainAxisSize: MainAxisSize.min,
-  //         crossAxisAlignment: CrossAxisAlignment.start,
-  //         children: [
-  //           Center(
-  //             child: Container(
-  //               width: 50,
-  //               height: 5,
-  //               decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(4)),
-  //             ),
-  //           ),
-
-  //           SizedBox(height: 20),
-
-  //           Text(t['type'], style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-
-  //           SizedBox(height: 10),
-  //           Text("Date: ${t['date']}"),
-  //           Text("Status: ${t['status']}"),
-
-  //           SizedBox(height: 20),
-
-  //           Text(
-  //             "Amount: ${t['amount']}",
-  //             style: TextStyle(
-  //               color: t['amount'] > 0 ? Colors.green : Colors.red,
-  //               fontWeight: FontWeight.bold,
-  //               fontSize: 18,
-  //             ),
-  //           ),
-
-  //           SizedBox(height: 20),
-
-  //           ElevatedButton.icon(
-  //             onPressed: () {},
-  //             icon: Icon(Icons.download),
-  //             label: Text("Download Receipt"),
-  //             style: ElevatedButton.styleFrom(minimumSize: Size(double.infinity, 50)),
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
+IconData _transactionIcon(Object? type) => switch ('$type'.toUpperCase()) {
+  'LOAN_DISBURSEMENT' ||
+  'DISBURSEMENT' ||
+  'DEPOSIT' ||
+  'TRANSFER_IN' => Icons.south_west_rounded,
+  'REPAYMENT' => Icons.north_east_rounded,
+  'WITHDRAWAL' || 'FEE' || 'TRANSFER_OUT' => Icons.north_east_rounded,
+  _ => Icons.swap_horiz_rounded,
+};
+bool _isIncoming(String type) => const {
+  'LOAN_DISBURSEMENT',
+  'DISBURSEMENT',
+  'DEPOSIT',
+  'TRANSFER_IN',
+}.contains(type);
+bool _isOutgoing(String type) =>
+    const {'REPAYMENT', 'WITHDRAWAL', 'FEE', 'TRANSFER_OUT'}.contains(type);
+double _number(Object? value) =>
+    value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+String _currency(Object? value) =>
+    NumberFormat.currency(symbol: '₱', decimalDigits: 2).format(_number(value));
+String _date(Object? value) {
+  final date = DateTime.tryParse('$value');
+  return date == null
+      ? 'Date unavailable'
+      : DateFormat('MMM d, y · h:mm a').format(date.toLocal());
 }

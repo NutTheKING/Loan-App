@@ -81,6 +81,23 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> patch(String path, {Object? data}) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(path, data: data);
+      return _asMap(response.data);
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
+
+  Future<void> patchEmpty(String path, {Object? data}) async {
+    try {
+      await _dio.patch<void>(path, data: data);
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
+
   Future<void> postMultipart(String path, FormData data) async {
     try {
       await _dio.post<void>(
@@ -156,6 +173,7 @@ class ApiClient {
       );
       return nextAccessToken;
     } on DioException {
+      await LocalStorage.clearSession();
       return null;
     }
   }

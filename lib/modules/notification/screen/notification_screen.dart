@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:loan_app/modules/notification/controller/notification_controller.dart';
 import 'package:loan_app/modules/notification/widget/customer_notification_card.dart';
 
@@ -15,7 +14,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   final _notiController = Get.put(NotificationController());
   @override
   void initState() {
-    _notiController.fetchAllNoticaitons();
+    _notiController.fetchAllNotifications();
     super.initState();
   }
 
@@ -23,26 +22,35 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          "Notification",
-          style: GoogleFonts.poppins(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+        title: const Text('Notifications'),
+        actions: [
+          TextButton(
+            onPressed: _notiController.markAllRead,
+            child: const Text('Mark all read'),
+          ),
+        ],
       ),
-      backgroundColor: Colors.white,
       body: Obx(
         () => _notiController.getNotificationLoading.value
             ? const Center(child: CircularProgressIndicator())
             : RefreshIndicator(
-                onRefresh: _notiController.fetchAllNoticaitons,
+                onRefresh: _notiController.fetchAllNotifications,
                 child: ListView.separated(
-                  padding: const EdgeInsets.only(left: 20, right: 20).copyWith(bottom: 30),
+                  padding: const EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                  ).copyWith(bottom: 30),
                   itemCount: _notiController.listNotification.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 20),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 20),
                   itemBuilder: (context, index) {
-                    final notification = _notiController.listNotification[index];
-                    return CustomNotification(notificationModel: notification);
+                    final notification =
+                        _notiController.listNotification[index];
+                    return CustomNotification(
+                      notificationModel: notification,
+                      onTap: () =>
+                          _notiController.openNotification(notification),
+                    );
                   },
                 ),
               ),

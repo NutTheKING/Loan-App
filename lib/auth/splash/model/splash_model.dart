@@ -12,7 +12,12 @@ class SplashController extends GetxController {
 
   Future<void> _goToInitialRoute() async {
     await Future<void>.delayed(const Duration(seconds: 1));
-    final authenticated = await AuthApi().hasSession();
-    appRouter.go(authenticated ? '/home' : '/login');
+    final user = await AuthApi().currentUser();
+    if (user == null) {
+      appRouter.go('/login');
+      return;
+    }
+
+    appRouter.go(user.canAccessAdmin ? '/admin' : '/home');
   }
 }

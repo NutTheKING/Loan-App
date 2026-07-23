@@ -11,14 +11,16 @@ class HomeView extends StatelessWidget {
   Widget build(BuildContext context) {
     final HomeController c = Get.put(HomeController());
     final width = MediaQuery.of(context).size.width;
-    final height = MediaQuery.of(context).size.height;
-
     return Scaffold(
       backgroundColor: const Color(0xFFdde6ea), // your exact color
       appBar: AppBar(
         backgroundColor: const Color(0xFFdde6ea),
         elevation: 0,
-        title: Image.asset('assets/gotyme_logo.png', width: 120, fit: BoxFit.contain),
+        title: Image.asset(
+          'assets/gotyme_logo.png',
+          width: 120,
+          fit: BoxFit.contain,
+        ),
         actions: [
           IconButton(
             onPressed: () => GoRouter.of(context).go('/notifications'),
@@ -40,7 +42,10 @@ class HomeView extends StatelessWidget {
                   Obx(
                     () => Text(
                       '₱${c.balance.value.toStringAsFixed(2)}',
-                      style: TextStyle(fontSize: width * 0.12, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: width * 0.12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -52,9 +57,12 @@ class HomeView extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  CustomeCircleAction(icon:Icons.add, label: 'Deposit'),
-                  CustomeCircleAction(icon: Icons.call_made,label: 'Send'),
-                  CustomeCircleAction(icon: Icons.qr_code_scanner,label: 'Scan'),
+                  CustomeCircleAction(icon: Icons.add, label: 'Deposit'),
+                  CustomeCircleAction(icon: Icons.call_made, label: 'Send'),
+                  CustomeCircleAction(
+                    icon: Icons.qr_code_scanner,
+                    label: 'Scan',
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -63,8 +71,10 @@ class HomeView extends StatelessWidget {
               // A button to navigate to Loan
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () => GoRouter.of(context).push('/loan'),
-                style: ElevatedButton.styleFrom(minimumSize: Size(double.infinity, 48)),
+                onPressed: () => GoRouter.of(context).push('/loan/amount'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: Size(double.infinity, 48),
+                ),
                 child: const Text('Go to Loan'),
               ),
               const SizedBox(height: 60),
@@ -78,5 +88,4 @@ class HomeView extends StatelessWidget {
       ),
     );
   }
-
 }

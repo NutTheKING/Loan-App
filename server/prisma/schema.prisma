@@ -56,12 +56,18 @@ model User {
   idNumber       String?        @unique
   role           UserRole       @default(CUSTOMER)
   isActive       Boolean        @default(true)
+  lastLoginAt    DateTime?
+  lastSeenAt     DateTime?
+  lastLogoutAt   DateTime?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   loans          Loan[]
+  transactions   Transaction[]
   refreshTokens  RefreshToken[]
   notifications  Notification[]
   auditEvents    AuditLog[]     @relation("AuditActor")
+  permissionOverrides UserPermission[]
+  deviceTokens   DeviceToken[]
 }
 
 model RefreshToken {
@@ -70,10 +76,8 @@ model RefreshToken {
   expiresAt   DateTime
   revokedAt   DateTime?
   createdAt   DateTime @default(now())
-  userId      String   @db.Uuid
+  userId      String   @unique @db.Uuid
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, expiresAt])
 }
 
 model Loan {
@@ -103,16 +107,21 @@ model Loan {
   reviewerNote         String?
   reviewedAt           DateTime?
   disbursedAt          DateTime?
+  submittedAt          DateTime?
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
   borrowerId           String       @db.Uuid
   borrower             User         @relation(fields: [borrowerId], references: [id], onDelete: Restrict)
+  productId            String?      @db.Uuid
+  product              LoanProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
   documents            LoanDocument[]
   repayments           Repayment[]
   transactions         Transaction[]
 
   @@index([borrowerId, createdAt])
   @@index([status, createdAt])
+  @@index([submittedAt, status, createdAt])
+  @@index([productId])
 }
 
 model LoanDocument {
@@ -188,4 +197,87 @@ model AuditLog {
   actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([entityType, entityId, createdAt])
+}
+
+model LoanProduct {
+  id                    String   @id @default(uuid()) @db.Uuid
+  code                  String   @unique @db.VarChar(32)
+  name                  String
+  description           String
+  currency              String   @default("PHP") @db.VarChar(3)
+  minimumAmount         Decimal  @db.Decimal(14, 2)
+  maximumAmount         Decimal  @db.Decimal(14, 2)
+  monthlyInterestRate   Decimal  @db.Decimal(7, 6)
+  allowedTerms          Int[]
+  repaymentFrequency    String   @default("MONTHLY") @db.VarChar(20)
+  isActive              Boolean  @default(true)
+  isDefault             Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  loans                 Loan[]
+
+  @@index([isActive, isDefault])
+}
+
+model Branch {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(32)
+  name        String
+  address     String
+  phone       String
+  email       String?  @db.VarChar(254)
+  managerName String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Permission {
+  id              String           @id @default(uuid()) @db.Uuid
+  key             String           @unique @db.VarChar(80)
+  name            String           @db.VarChar(120)
+  description     String?
+  category        String           @db.VarChar(80)
+  sortOrder       Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  roleAssignments RolePermission[]
+  userAssignments UserPermission[]
+
+  @@index([category, sortOrder])
+}
+
+model RolePermission {
+  role         UserRole
+  permissionId String     @db.Uuid
+  createdAt    DateTime   @default(now())
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([role, permissionId])
+  @@index([permissionId])
+}
+
+model UserPermission {
+  userId       String     @db.Uuid
+  permissionId String     @db.Uuid
+  granted      Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, permissionId])
+  @@index([permissionId])
+}
+
+model DeviceToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  token      String   @unique
+  platform   String   @db.VarChar(24)
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  userId     String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, lastSeenAt])
 }

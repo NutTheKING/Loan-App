@@ -27,9 +27,9 @@ class CustomSupportCardWidgety extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: color?.withOpacity(0.10),
+        color: color?.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color!.withOpacity(0.4)),
+        border: Border.all(color: color!.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -41,13 +41,22 @@ class CustomSupportCardWidgety extends StatelessWidget {
           ),
           const SizedBox(height: 14),
 
-          Text(title ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(
+            title ?? '',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
 
           const SizedBox(height: 4),
-          Text(subtitle ?? '', style: TextStyle(fontSize: 15, color: Colors.grey.shade600)),
+          Text(
+            subtitle ?? '',
+            style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+          ),
 
           const SizedBox(height: 10),
-          Text(description ?? '', style: TextStyle(fontSize: 15, color: Colors.grey.shade700)),
+          Text(
+            description ?? '',
+            style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
+          ),
 
           const SizedBox(height: 14),
 
@@ -57,10 +66,15 @@ class CustomSupportCardWidgety extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: color,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onPressed: onTap,
-              child: Text(buttonText ?? '', style: const TextStyle(color: Colors.white)),
+              child: Text(
+                buttonText ?? '',
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ),
         ],

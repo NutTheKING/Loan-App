@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:loan_app/auth/login/screen/login_screen.dart';
 import 'package:loan_app/auth/signup/screen/register_screen.dart';
 import 'package:loan_app/auth/splash/screen/splash_screen.dart';
+import 'package:loan_app/features/admin/screen/admin_dashboard_screen.dart';
 import 'package:loan_app/modules/deposit/screen/deposit_screen.dart';
 import 'package:loan_app/modules/exchange_rate/screen/exchange_rate_screen.dart';
 import 'package:loan_app/modules/explore_reward/screen/explore_reward_screen.dart';
@@ -13,7 +14,7 @@ import 'package:loan_app/modules/loan/screen/loan_screen.dart';
 import 'package:loan_app/modules/loan/screen/signature_screen.dart';
 import 'package:loan_app/modules/loan/screen/submit_personal_info_screen.dart';
 import 'package:loan_app/modules/loan/screen/upload_id_card_screen.dart';
-import 'package:loan_app/modules/notification/model/notification_model.dart';
+import 'package:loan_app/modules/loan/loan_routes.dart';
 import 'package:loan_app/modules/notification/screen/notification_screen.dart';
 import 'package:loan_app/modules/profile/screen/beneficiary_information_screen.dart';
 import 'package:loan_app/modules/profile/screen/help_center_screen.dart';
@@ -52,6 +53,11 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const BankHome(),
     ),
     GoRoute(
+      path: '/admin',
+      name: 'admin',
+      builder: (context, state) => const AdminDashboardScreen(),
+    ),
+    GoRoute(
       path: '/profile',
       name: 'profile',
       builder: (context, state) => AccountProfileScreen(),
@@ -59,6 +65,11 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/loan',
       name: 'loan',
+      redirect: (context, state) => LoanRoutes.amount,
+    ),
+    GoRoute(
+      path: LoanRoutes.amount,
+      name: 'loanAmount',
       builder: (context, state) => const LoanView(),
     ),
     GoRoute(
@@ -80,22 +91,23 @@ final GoRouter appRouter = GoRouter(
     ),
 
     GoRoute(
-      path: '/personal-info',
-      name: 'peronal_information',
+      path: LoanRoutes.personalInformation,
+      name: 'loanPersonalInformation',
       builder: (context, state) => PersonalInfoScreen(),
     ),
     GoRoute(
-      path: '/bank-account',
-      name: 'bank_account',
+      path: LoanRoutes.payoutAccount,
+      name: 'loanPayoutAccount',
       builder: (context, state) => BankAccountScreen(),
     ),
     GoRoute(
-      path: '/upload-id',
-      name: 'upload_id',
+      path: LoanRoutes.documents,
+      name: 'loanDocuments',
       builder: (context, state) => UploadScreen(),
     ),
     GoRoute(
-      path: "/signature",
+      path: LoanRoutes.signature,
+      name: 'loanSignature',
       builder: (context, state) {
         final data = state.extra as Map?;
         return SignatureScreen(

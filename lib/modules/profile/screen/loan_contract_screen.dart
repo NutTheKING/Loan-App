@@ -1,123 +1,168 @@
 import 'package:flutter/material.dart';
-import 'package:loan_app/modules/profile/widget/custom_contract_row_widget.dart';
-import 'package:loan_app/modules/profile/widget/custom_contract_text_widget.dart';
-import 'package:loan_app/modules/profile/widget/custom_signature_block_widget.dart';
-import 'package:loan_app/modules/profile/widget/custome_selection_title_widget.dart';
+import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import 'package:loan_app/modules/profile/controller/profile_controller.dart';
+import 'package:loan_app/modules/profile/widget/account_ui.dart';
 
 class LoanContractView extends StatelessWidget {
-  const LoanContractView({super.key});
+  LoanContractView({super.key});
+
+  final ProfileController controller = ProfileController.ensure();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xfff2f5f8),
-      appBar: AppBar(title: const Text("Loan Contract"), elevation: 0, backgroundColor: const Color(0xfff2f5f8)),
-      body: Stack(
-        children: [
-          // ---------------- CONTRACT BODY ----------------
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(color: Colors.black12.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 4)),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  //------------------------------------------------------
-                  //                TITLE
-                  //------------------------------------------------------
-                  const Text("Loan Agreement Contract", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  const Text(
-                    "Please review all terms carefully before proceeding.",
-                    style: TextStyle(color: Colors.black54),
-                  ),
-                  const SizedBox(height: 20),
-
-                  //------------------------------------------------------
-                  //                SECTION 1: BORROWER DETAILS
-                  //------------------------------------------------------
-                  CustomeSelectionTitleWidget(title: "Borrower Information"),
-                  CustomContractRowWidget(label: "Full Name", value: "___________"),
-                  CustomContractRowWidget(label: "Phone Number", value: "___________"),
-                  CustomContractRowWidget(label: "ID Card", value: "___________"),
-                  const SizedBox(height: 20),
-
-                  //------------------------------------------------------
-                  //                SECTION 2: LOAN DETAILS
-                  //------------------------------------------------------
-                  CustomeSelectionTitleWidget(title: "Loan Details"),
-                  CustomContractRowWidget(label: "Loan Amount", value: "₱ _________"),
-                  CustomContractRowWidget(label: "Loan Period", value: "___ Months"),
-                  CustomContractRowWidget(label: "Monthly Interest", value: "0.5%"),
-                  CustomContractRowWidget(label: "Total Interest", value: "₱ _________"),
-                  CustomContractRowWidget(label: "Monthly Payment", value: "₱ _________"),
-                  CustomContractRowWidget(label: "Disbursement Date", value: "___________"),
-                  const SizedBox(height: 20),
-
-                  //------------------------------------------------------
-                  //                SECTION 3: TERMS
-                  //------------------------------------------------------
-                  CustomeSelectionTitleWidget(title: "Agreement Terms"),
-                  CustomContractTextWidget(text: "1. The borrower agrees to repay the loan under the specified terms."),
-                  CustomContractTextWidget(text: "2. Late payments may result in penalties as defined by the lender."),
-                  CustomContractTextWidget(text: "3. All information provided must be true and accurate."),
-                  CustomContractTextWidget(
-                    text: "4. The lender reserves the right to take legal action for non-payment.",
-                  ),
-                  CustomContractTextWidget(text: "5. Disbursement may take up to 24 hours after approval."),
-                  CustomContractTextWidget(text: "6. Interest is calculated monthly based on the outstanding balance."),
-
-                  const SizedBox(height: 20),
-
-                  //------------------------------------------------------
-                  //                SECTION 4: SIGNATURE AREAS
-                  //------------------------------------------------------
-                  CustomeSelectionTitleWidget(title: "Signatures"),
-
-                  const SizedBox(height: 10),
-                  CustomSignatureBlockWidget(label:"Borrower Signature"),
-                  const SizedBox(height: 25),
-                  CustomSignatureBlockWidget(label:"Lender / Company Signature"),
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
-          ),
-
-          //------------------------------------------------------
-          //                BOTTOM BUTTON: AGREE & CONTINUE
-          //------------------------------------------------------
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              color: const Color(0xfff2f5f8),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Navigate to Next Step
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: const Text("Agree & Continue", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+    return Obx(() {
+      final loan = controller.latestLoan;
+      return AccountPage(
+        title: 'Loan contract',
+        onRefresh: controller.loadAccount,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          children: [
+            if (loan == null)
+              const AccountEmptyState(
+                icon: Icons.description_outlined,
+                title: 'No contract available',
+                message:
+                    'Your latest loan agreement will appear after an application is submitted.',
+              )
+            else ...[
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${loan['loanNumber'] ?? 'Loan agreement'}',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ),
+                        StatusPill(status: '${loan['status'] ?? 'PENDING'}'),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text('Submitted ${_date(loan['createdAt'])}'),
+                  ],
                 ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
+              const SizedBox(height: 14),
+              AccountSection(
+                title: 'Financial summary',
+                children: [
+                  AccountInfoRow(
+                    label: 'Principal',
+                    value: _currency(loan['principal']),
+                  ),
+                  AccountInfoRow(
+                    label: 'Term',
+                    value: '${loan['termMonths'] ?? 0} months',
+                  ),
+                  AccountInfoRow(
+                    label: 'Monthly interest',
+                    value:
+                        '${(_number(loan['monthlyInterestRate']) * 100).toStringAsFixed(2)}%',
+                  ),
+                  AccountInfoRow(
+                    label: 'Interest amount',
+                    value: _currency(loan['interestAmount']),
+                  ),
+                  AccountInfoRow(
+                    label: 'Monthly payment',
+                    value: _currency(loan['monthlyPayment']),
+                  ),
+                  AccountInfoRow(
+                    label: 'Total repayment',
+                    value: _currency(loan['totalRepayment']),
+                    showDivider: false,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              const AccountSection(
+                title: 'Agreement summary',
+                children: [
+                  _ContractClause(
+                    number: '01',
+                    text:
+                        'Repay principal and interest according to the payment schedule.',
+                  ),
+                  _ContractClause(
+                    number: '02',
+                    text:
+                        'Keep identity, contact, employment, and payout details accurate.',
+                  ),
+                  _ContractClause(
+                    number: '03',
+                    text:
+                        'Late or missed payments may result in penalties under the final agreement.',
+                  ),
+                  _ContractClause(
+                    number: '04',
+                    text:
+                        'Approval and final disbursement remain subject to lender review.',
+                    showDivider: false,
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      );
+    });
   }
+}
+
+class _ContractClause extends StatelessWidget {
+  const _ContractClause({
+    required this.number,
+    required this.text,
+    this.showDivider = true,
+  });
+
+  final String number;
+  final String text;
+  final bool showDivider;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              number,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(child: Text(text)),
+          ],
+        ),
+      ),
+      if (showDivider) const Divider(height: 1),
+    ],
+  );
+}
+
+double _number(Object? value) =>
+    value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+String _currency(Object? value) =>
+    NumberFormat.currency(symbol: '₱', decimalDigits: 2).format(_number(value));
+String _date(Object? value) {
+  final date = DateTime.tryParse('$value');
+  return date == null
+      ? 'Not available'
+      : DateFormat.yMMMd().format(date.toLocal());
 }

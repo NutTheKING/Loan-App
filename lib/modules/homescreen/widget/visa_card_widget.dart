@@ -52,9 +52,9 @@ class _DebitCardWidgetState extends State<DebitCardWidget> {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.white.withOpacity(0),
-                            Colors.white.withOpacity(0.28),
-                            Colors.white.withOpacity(0),
+                            Colors.white.withValues(alpha: 0),
+                            Colors.white.withValues(alpha: 0.28),
+                            Colors.white.withValues(alpha: 0),
                           ],
                         ),
                       ),
@@ -73,15 +73,30 @@ class _DebitCardWidgetState extends State<DebitCardWidget> {
                 children: [
                   const Text(
                     "Debit card",
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xff253238)),
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xff253238),
+                    ),
                   ),
 
                   const SizedBox(height: 16),
 
-                  Text("CARD NUMBER", style: TextStyle(color: Colors.grey.shade700, letterSpacing: 1.3, fontSize: 12)),
+                  Text(
+                    "CARD NUMBER",
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      letterSpacing: 1.3,
+                      fontSize: 12,
+                    ),
+                  ),
                   const SizedBox(height: 4),
 
-                  _roundedField(showNumbers ? "4312 5548 9988 1123" : "••••  ••••  ••••  ••••"),
+                  _roundedField(
+                    showNumbers
+                        ? "4312 5548 9988 1123"
+                        : "••••  ••••  ••••  ••••",
+                  ),
 
                   const SizedBox(height: 14),
 
@@ -93,7 +108,11 @@ class _DebitCardWidgetState extends State<DebitCardWidget> {
                           children: [
                             Text(
                               "EXPIRES",
-                              style: TextStyle(color: Colors.grey.shade700, letterSpacing: 1.2, fontSize: 12),
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                letterSpacing: 1.2,
+                                fontSize: 12,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             _roundedField(showNumbers ? "04/27" : "••/••"),
@@ -107,7 +126,11 @@ class _DebitCardWidgetState extends State<DebitCardWidget> {
                           children: [
                             Text(
                               "CVV",
-                              style: TextStyle(color: Colors.grey.shade700, letterSpacing: 1.2, fontSize: 12),
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                letterSpacing: 1.2,
+                                fontSize: 12,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             _roundedField(showNumbers ? "842" : "•••"),
@@ -128,13 +151,20 @@ class _DebitCardWidgetState extends State<DebitCardWidget> {
                   child: CircleAvatar(
                     backgroundColor: Colors.white,
                     radius: 18,
-                    child: Icon(showNumbers ? Icons.visibility : Icons.visibility_off, color: Colors.deepPurple),
+                    child: Icon(
+                      showNumbers ? Icons.visibility : Icons.visibility_off,
+                      color: Colors.deepPurple,
+                    ),
                   ),
                 ),
               ),
 
               // ➡ Arrow Top Right
-              const Positioned(right: 10, top: 10, child: Icon(Icons.arrow_forward, color: Colors.black87)),
+              const Positioned(
+                right: 10,
+                top: 10,
+                child: Icon(Icons.arrow_forward, color: Colors.black87),
+              ),
 
               // VISA Logo
               Positioned(
@@ -142,7 +172,11 @@ class _DebitCardWidgetState extends State<DebitCardWidget> {
                 right: 10,
                 child: Text(
                   "VISA",
-                  style: TextStyle(fontSize: w * 0.12, fontWeight: FontWeight.bold, color: const Color(0xff11307E)),
+                  style: TextStyle(
+                    fontSize: w * 0.12,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xff11307E),
+                  ),
                 ),
               ),
             ],
@@ -158,8 +192,18 @@ class _DebitCardWidgetState extends State<DebitCardWidget> {
   Widget _roundedField(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(40)),
-      child: Text(text, style: const TextStyle(fontSize: 17, letterSpacing: 2, fontWeight: FontWeight.bold)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(40),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 17,
+          letterSpacing: 2,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:loan_app/core/network/api_exception.dart';
+import 'package:loan_app/core/auth/auth_session.dart';
 import 'package:loan_app/features/auth/data/auth_api.dart';
 
 class SignInController extends GetxController {
@@ -28,20 +29,20 @@ class SignInController extends GetxController {
         passwordController.text.length >= 12;
   }
 
-  Future<bool> signIn() async {
+  Future<AuthUser?> signIn() async {
     if (!isValid || loading.value) {
-      return false;
+      return null;
     }
     loading.value = true;
     loginSuccess.value = false;
 
     try {
-      await _authApi.signIn(
+      final session = await _authApi.signIn(
         email: emailController.text.trim(),
         password: passwordController.text,
       );
       loginSuccess.value = true;
-      return true;
+      return session.user;
     } on ApiException catch (error) {
       Get.snackbar(
         'Login failed',
@@ -50,7 +51,17 @@ class SignInController extends GetxController {
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
       );
-      return false;
+      return null;
+    } catch (error) {
+      debugPrint('Unexpected login failure: $error');
+      Get.snackbar(
+        'Login failed',
+        'Unable to complete sign-in. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return null;
     } finally {
       loading.value = false;
     }

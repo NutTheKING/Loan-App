@@ -29,9 +29,12 @@ class CustomTextfieldWidget extends StatelessWidget {
               ),
             ),
             onChanged: (v) {
-              if (controller is RxString) controller.value = v;
-              if (controller is RxDouble)
+              if (controller is RxString) {
+                controller.value = v;
+              }
+              if (controller is RxDouble) {
                 controller.value = double.tryParse(v) ?? 0;
+              }
             },
             controller: TextEditingController(
               text: controller.value is String

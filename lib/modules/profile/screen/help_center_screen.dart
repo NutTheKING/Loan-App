@@ -1,89 +1,107 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:loan_app/modules/profile/controller/profile_controller.dart';
-import 'package:loan_app/modules/profile/widget/custom_support_card_widget.dart';
-import 'package:loan_app/modules/profile/widget/ucstom_faq_item_widget.dart';
+import 'package:loan_app/modules/profile/widget/account_ui.dart';
 
 class HelpCenterScreen extends StatelessWidget {
   HelpCenterScreen({super.key});
 
-  final ProfileController helpCenterCon = Get.put(ProfileController());
+  final ProfileController controller = ProfileController.ensure();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Help Center"), centerTitle: true),
-
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("We’re here for you 24/7", style: TextStyle(fontSize: 16, color: Colors.grey)),
-            const SizedBox(height: 20),
-
-            // 🟦 Telegram Support Card
-            CustomSupportCardWidgety(
-              color: const Color(0xFF1C93E3),
-              icon: Icons.telegram,
-              title: "Telegram Support",
-              subtitle: "@LoanSupportOfficial",
-              description: "Chat with our official support team directly.",
-              buttonText: "Open Telegram",
-              onTap: () {
-                helpCenterCon.openTelegram();
-              },
+    return AccountPage(
+      title: 'Help center',
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(26),
             ),
-
-            const SizedBox(height: 18),
-
-            // 🟩 LiveHelp100 Support Card
-            CustomSupportCardWidgety(
-              color: const Color(0xFF28C76F),
-              icon: Icons.headset_mic_rounded,
-              title: "LiveHelp100 – 24/7 Chat",
-              subtitle: "Instant Customer Support",
-              description: "Response time usually less than 1 minute.",
-              buttonText: "Start Live Chat",
-              onTap: () {},
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.support_agent_rounded, size: 38),
+                const SizedBox(height: 14),
+                Text(
+                  'How can we help?',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Find quick answers below or send our support team an email.',
+                ),
+                const SizedBox(height: 18),
+                FilledButton.icon(
+                  onPressed: controller.contactSupport,
+                  icon: const Icon(Icons.email_outlined),
+                  label: const Text('Email support'),
+                ),
+              ],
             ),
-
-            const SizedBox(height: 30),
-
-            // FAQ Section
-            const Text("Common Questions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-
-            CustomFaqItemWidget(title: "How to apply for a loan?"),
-            CustomFaqItemWidget(title: "Why was my loan rejected?"),
-            CustomFaqItemWidget(title: "How do I repay early?"),
-            CustomFaqItemWidget(title: "What documents are required?"),
-
-            const SizedBox(height: 30),
-
-            // Other Options
-            const Text("Other Support Options", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-
-            const SizedBox(height: 12),
-
-            ListTile(
-              leading: const Icon(Icons.email_outlined),
-              title: const Text("Email Support"),
-              subtitle: const Text("support@loanapp.com"),
-              onTap: () {},
-            ),
-
-            ListTile(
-              leading: const Icon(Icons.receipt_long),
-              title: const Text("Submit a Ticket"),
-              subtitle: const Text("We will reply within 24 hours."),
-              onTap: () {},
-            ),
-
-            const SizedBox(height: 40),
-          ],
-        ),
+          ),
+          const SizedBox(height: 18),
+          const AccountSection(
+            title: 'Frequently asked questions',
+            children: [
+              _Question(
+                title: 'How long does loan review take?',
+                answer:
+                    'Review timing depends on document quality and verification. You will receive a notification when the status changes.',
+              ),
+              _Question(
+                title: 'Why can’t I create another loan?',
+                answer:
+                    'Only one pending application is allowed. A new application becomes available after the current review is completed.',
+              ),
+              _Question(
+                title: 'Where can I see repayments?',
+                answer:
+                    'Open Account, then Payment schedule to view every installment and its current status.',
+              ),
+              _Question(
+                title: 'How do notifications work?',
+                answer:
+                    'Application events appear in the notification center. Push delivery also requires notification permission on your device.',
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const AccountSection(
+            title: 'Support details',
+            children: [
+              AccountInfoRow(
+                icon: Icons.email_outlined,
+                label: 'Email',
+                value: 'support@loanapp.com',
+              ),
+              AccountInfoRow(
+                icon: Icons.schedule_outlined,
+                label: 'Response target',
+                value: 'Within 24 hours',
+                showDivider: false,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
+}
+
+class _Question extends StatelessWidget {
+  const _Question({required this.title, required this.answer});
+
+  final String title;
+  final String answer;
+
+  @override
+  Widget build(BuildContext context) => ExpansionTile(
+    tilePadding: EdgeInsets.zero,
+    childrenPadding: const EdgeInsets.only(bottom: 14),
+    title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+    children: [Align(alignment: Alignment.centerLeft, child: Text(answer))],
+  );
 }

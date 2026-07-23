@@ -12,6 +12,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { loadConfig } from './lib/config.js';
 import { registerErrorHandler } from './lib/errors.js';
 import { registerAccountRoutes } from './routes/account.js';
+import { registerAdminRoutes } from './routes/admin.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerLoanRoutes } from './routes/loans.js';
 
@@ -45,10 +46,20 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(swaggerUi, { routePrefix: '/docs' });
 
   registerErrorHandler(app);
+  app.get('/', { schema: { hide: true } }, async () => ({
+    name: 'Loan App API',
+    status: 'online',
+    website: 'http://127.0.0.1:8080/#/login',
+    admin: 'http://127.0.0.1:8080/#/admin',
+    documentation: 'http://127.0.0.1:4000/docs',
+    health: 'http://127.0.0.1:4000/health',
+    apiBaseUrl: 'http://127.0.0.1:4000/api/v1',
+  }));
   app.get('/health', { schema: { tags: ['System'], summary: 'Check API health' } }, async () => ({ status: 'ok' }));
   await app.register(registerAuthRoutes, { prefix: '/api/v1' });
   await app.register((instance) => registerLoanRoutes(instance, config), { prefix: '/api/v1' });
   await app.register(registerAccountRoutes, { prefix: '/api/v1' });
+  await app.register(registerAdminRoutes, { prefix: '/api/v1' });
 
   return app;
 }

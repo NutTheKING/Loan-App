@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
 class CustomSelectionTitleWidgets extends StatelessWidget {
-  const CustomSelectionTitleWidgets({super.key, required this.icon, required this.title});
+  const CustomSelectionTitleWidgets({
+    super.key,
+    required this.icon,
+    required this.title,
+  });
 
-final IconData icon;
+  final IconData icon;
   final String title;
 
   @override
@@ -14,7 +18,10 @@ final IconData icon;
         children: [
           Icon(icon, color: Colors.blue, size: 22),
           const SizedBox(width: 8),
-          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );

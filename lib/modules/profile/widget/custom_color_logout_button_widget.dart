@@ -23,7 +23,13 @@ class CustomColorLogoutButtonWidget extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          boxShadow: [BoxShadow(color: Colors.redAccent.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 4))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.redAccent.withValues(alpha: 0.25),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -32,7 +38,11 @@ class CustomColorLogoutButtonWidget extends StatelessWidget {
             SizedBox(width: 10),
             Text(
               "Logout",
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),

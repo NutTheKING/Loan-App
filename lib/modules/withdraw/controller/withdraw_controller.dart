@@ -1,14 +1,42 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:loan_app/core/network/api_client.dart';
+import 'package:loan_app/core/network/api_exception.dart';
+import 'package:loan_app/features/transactions/data/transaction_api.dart';
+import 'package:loan_app/modules/homescreen/controller/home_screen_controller.dart';
 
 class WithdrawController extends GetxController {
-  var availableBalance = 5000.0.obs; // Example balance
-  var withdrawAmount = 0.0.obs;
-  var selectedMethod = ''.obs;
+  final TransactionApi _transactionApi = TransactionApi();
+  final availableBalance = 0.0.obs;
+  final withdrawAmount = 0.0.obs;
+  final selectedMethod = ''.obs;
+  final isLoading = false.obs;
+  final isSubmitting = false.obs;
 
-  var methods = ["Bank Transfer", "GCash", "PayPal"];
+  final methods = const ['Bank Transfer', 'GCash', 'PayPal'];
 
-  bool isValid() {
-    return withdrawAmount.value > 0 && withdrawAmount.value <= availableBalance.value && selectedMethod.isNotEmpty;
+  bool get isValid =>
+      withdrawAmount.value > 0 &&
+      withdrawAmount.value <= availableBalance.value &&
+      selectedMethod.value.isNotEmpty &&
+      !isSubmitting.value;
+
+  @override
+  void onInit() {
+    super.onInit();
+    loadBalance();
+  }
+
+  Future<void> loadBalance() async {
+    isLoading.value = true;
+    try {
+      final dashboard = await ApiClient.instance.get('/dashboard');
+      availableBalance.value = _number(dashboard['availableBalance']);
+    } on ApiException catch (error) {
+      Get.snackbar('Balance unavailable', error.message);
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   void reset() {
@@ -16,12 +44,34 @@ class WithdrawController extends GetxController {
     selectedMethod.value = '';
   }
 
-  void submit() {
-    if (isValid()) {
-      // handle withdraw API call here
-      print("Withdraw ${withdrawAmount.value} via ${selectedMethod.value}");
-      availableBalance.value -= withdrawAmount.value;
+  Future<bool> submit() async {
+    if (!isValid) return false;
+    isSubmitting.value = true;
+    try {
+      availableBalance.value = await _transactionApi.create(
+        type: 'WITHDRAWAL',
+        amount: withdrawAmount.value,
+        description: 'Withdrawal via ${selectedMethod.value}',
+      );
       reset();
+      if (Get.isRegistered<HomeController>()) {
+        await Get.find<HomeController>().loadDashboard();
+      }
+      Get.snackbar(
+        'Withdrawal completed',
+        'The transaction is now visible in your account history.',
+        backgroundColor: const Color(0xFF12B76A),
+        colorText: Colors.white,
+      );
+      return true;
+    } on ApiException catch (error) {
+      Get.snackbar('Withdrawal failed', error.message);
+      return false;
+    } finally {
+      isSubmitting.value = false;
     }
   }
+
+  static double _number(Object? value) =>
+      value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
 }

@@ -17,8 +17,12 @@ stacktrace.txt
 # VS Code related
 .vscode/
 
+# Visual Studio related
+.vs/
+
 # Other editors
 *.swp
+devtools_options.yaml
 
 # Flutter specific
 .flutter-plugins
@@ -51,6 +55,9 @@ generated_plugin_registrant.dart
 
 # Web
 lib/generated_plugin_registrant.dart
+
+# Logs
+*.log
 
 # Linux / macOS
 flutter/generated_plugins.cmake

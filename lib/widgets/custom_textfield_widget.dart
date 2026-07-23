@@ -36,7 +36,9 @@ class _CustomInputFieldState extends State<CustomInputField> {
     ever(widget.rxValue, (v) {
       if (controller.text != v.toString()) {
         controller.text = v.toString();
-        controller.selection = TextSelection.fromPosition(TextPosition(offset: controller.text.length));
+        controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: controller.text.length),
+        );
       }
     });
   }
@@ -50,7 +52,7 @@ class _CustomInputFieldState extends State<CustomInputField> {
         decoration: BoxDecoration(
           color: AppColors.cool,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.strength.withOpacity(.3)),
+          border: Border.all(color: AppColors.strength.withValues(alpha: .3)),
         ),
         child: TextField(
           controller: controller,
@@ -61,18 +63,24 @@ class _CustomInputFieldState extends State<CustomInputField> {
           decoration: InputDecoration(
             labelText: widget.label,
             border: InputBorder.none,
-            prefixIcon: widget.prefixIcon != null ? Icon(widget.prefixIcon, color: AppColors.impact) : null,
-            labelStyle: const TextStyle(color: AppColors.strength, fontWeight: FontWeight.w500),
+            prefixIcon: widget.prefixIcon != null
+                ? Icon(widget.prefixIcon, color: AppColors.impact)
+                : null,
+            labelStyle: const TextStyle(
+              color: AppColors.strength,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           onChanged: (v) {
-            if (widget.rxValue is RxString)
+            if (widget.rxValue is RxString) {
               widget.rxValue.value = v;
-            else if (widget.rxValue is RxInt)
+            } else if (widget.rxValue is RxInt) {
               widget.rxValue.value = int.tryParse(v) ?? 0;
-            else if (widget.rxValue is RxDouble)
+            } else if (widget.rxValue is RxDouble) {
               widget.rxValue.value = double.tryParse(v) ?? 0.0;
-            else
-              widget.rxValue.value = v; // fallback for Rx<dynamic>
+            } else {
+              widget.rxValue.value = v;
+            }
           },
         ),
       ),

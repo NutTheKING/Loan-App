@@ -1,79 +1,124 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:loan_app/modules/profile/controller/profile_controller.dart';
-import 'package:loan_app/modules/profile/widget/custom_info_tile_widget.dart';
+import 'package:loan_app/modules/profile/widget/account_ui.dart';
 
 class PersonalInformationScreen extends StatelessWidget {
-  final ProfileController pc = Get.put(ProfileController());
-
   PersonalInformationScreen({super.key});
+
+  final ProfileController controller = ProfileController.ensure();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("User Profile")),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Obx(() {
-          final u = pc.users.value;
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ------------------- PROFILE HEADER -------------------
-              Center(
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 45,
-                      backgroundImage: u.profileUrl.isEmpty ? null : NetworkImage(u.profileUrl),
-                      child: u.profileUrl.isEmpty ? const Icon(Icons.person, size: 45) : null,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(u.phoneNumber.isEmpty ? "No Phone" : u.phoneNumber, style: const TextStyle(fontSize: 16)),
-                  ],
+    return Obx(() {
+      final loan = controller.latestLoan;
+      return AccountPage(
+        title: 'Personal information',
+        onRefresh: controller.loadAccount,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          children: [
+            if (controller.isLoading.value) const LinearProgressIndicator(),
+            if (controller.isLoading.value) const SizedBox(height: 18),
+            AccountSection(
+              title: 'Account identity',
+              subtitle: 'Verified information from your signed-in account.',
+              children: [
+                AccountInfoRow(
+                  icon: Icons.person_outline_rounded,
+                  label: 'Full name',
+                  value: controller.fullName,
                 ),
-              ),
-
-              const SizedBox(height: 30),
-              const Text("Personal Information", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-
-              CustomInfoTileWidget(title: "Full Name", value: u.actualName),
-              CustomInfoTileWidget(title: "Gender", value: u.gender),
-              CustomInfoTileWidget(title: "Current Job", value: u.currentJob),
-              CustomInfoTileWidget(title: "Stable Income", value: "₱ ${u.stableIncome}"),
-
-              // ID card with masking toggle
-              Row(
+                AccountInfoRow(
+                  icon: Icons.email_outlined,
+                  label: 'Email',
+                  value: controller.email,
+                ),
+                AccountInfoRow(
+                  icon: Icons.badge_outlined,
+                  label: 'ID number',
+                  value: controller.maskedId,
+                ),
+                AccountInfoRow(
+                  icon: Icons.calendar_today_outlined,
+                  label: 'Member since',
+                  value: _date(controller.user.value?.createdAt),
+                  showDivider: false,
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            if (loan == null)
+              const AccountEmptyState(
+                icon: Icons.description_outlined,
+                title: 'No application details yet',
+                message:
+                    'Personal application information appears after you submit a loan.',
+              )
+            else ...[
+              AccountSection(
+                title: 'Application details',
+                subtitle: 'Information submitted with your latest application.',
                 children: [
-                  Expanded(
-                    child: CustomInfoTileWidget(title: "ID Card", value: pc.maskedId),
+                  AccountInfoRow(
+                    label: 'Legal name',
+                    value: '${loan['actualName'] ?? ''}',
                   ),
-                  Switch(value: u.showFullId, onChanged: (_) => pc.toggleShowId()),
+                  AccountInfoRow(
+                    label: 'Current job',
+                    value: '${loan['currentJob'] ?? ''}',
+                  ),
+                  AccountInfoRow(
+                    label: 'Gender',
+                    value: '${loan['gender'] ?? ''}',
+                  ),
+                  AccountInfoRow(
+                    label: 'Monthly income',
+                    value: _currency(loan['stableIncome']),
+                  ),
+                  AccountInfoRow(
+                    label: 'Loan purpose',
+                    value: '${loan['loanPurpose'] ?? ''}',
+                  ),
+                  AccountInfoRow(
+                    label: 'Address',
+                    value: '${loan['currentAddress'] ?? ''}',
+                    showDivider: false,
+                  ),
                 ],
               ),
-
-              CustomInfoTileWidget(title: "Loan Purpose", value: u.loanPurpose),
-              CustomInfoTileWidget(title: "Address", value: u.currentAddress),
-
-              const SizedBox(height: 25),
-              const Text("Guarantor", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-
-              CustomInfoTileWidget(title: "Name", value: u.guarantorName),
-              CustomInfoTileWidget(title: "Phone", value: u.guarantorPhone),
-
-              const SizedBox(height: 25),
-              const Text("Loan Information", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-
-              CustomInfoTileWidget(title: "Borrowing Amount", value: "₱ ${u.borrowingAmount} / ${u.months} Months"),
-              CustomInfoTileWidget(title: "Monthly Payment", value: "₱ ${u.monthlyPayment}"),
+              const SizedBox(height: 14),
+              AccountSection(
+                title: 'Guarantor',
+                children: [
+                  AccountInfoRow(
+                    label: 'Full name',
+                    value: '${loan['guarantorName'] ?? ''}',
+                  ),
+                  AccountInfoRow(
+                    label: 'Phone number',
+                    value: '${loan['guarantorPhone'] ?? ''}',
+                    showDivider: false,
+                  ),
+                ],
+              ),
             ],
-          );
-        }),
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 }
+
+String _currency(Object? value) {
+  final number = value is num
+      ? value.toDouble()
+      : double.tryParse('$value') ?? 0;
+  return NumberFormat.currency(symbol: '₱', decimalDigits: 2).format(number);
+}
+
+String _date(DateTime? value) => value == null
+    ? 'Not available'
+    : DateFormat.yMMMd().format(value.toLocal());

@@ -49,9 +49,21 @@ class CustomTransactionCardWidget extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(type, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(
+                      type,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(date, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                    Text(
+                      date,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 13,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -101,10 +113,17 @@ class CustomTransactionCardWidget extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Text(
         status.toUpperCase(),
-        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 11.5),
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 11.5,
+        ),
       ),
     );
   }

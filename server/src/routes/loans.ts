@@ -1,14 +1,17 @@
 import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
-import { DocumentKind, LoanStatus, UserRole } from '@prisma/client';
+import { DocumentKind, LoanStatus, Prisma } from '@prisma/client';
 import { z } from 'zod';
 
 import type { AppConfig } from '../lib/config.js';
-import { createRepaymentSchedule, calculateLoanQuote, loanPolicy } from '../lib/loan-policy.js';
+import { sendPushToUsers } from '../lib/firebase.js';
+import { createRepaymentSchedule, calculateLoanQuote } from '../lib/loan-policy.js';
+import { getActiveLoanProduct, productToPolicy, serializeLoanProduct } from '../lib/loan-products.js';
+import { findUserIdsWithPermission, Permissions } from '../lib/permissions.js';
 import { prisma } from '../lib/prisma.js';
 import { serializeLoan } from '../lib/serializers.js';
 import { readPrivateDocument, savePrivateDocument } from '../lib/storage.js';
-import { requireAuthentication, requireRoles } from '../plugins/auth.js';
+import { requireAuthentication, requirePermission } from '../plugins/auth.js';
 
 const applicationSchema = z.object({
   amount: z.coerce.number().finite(),
@@ -26,6 +29,7 @@ const applicationSchema = z.object({
   beneficiaryBank: z.string().trim().min(2).max(120),
   accountName: z.string().trim().min(2).max(120),
   accountNumber: z.string().trim().min(4).max(64),
+  productId: z.string().uuid().optional(),
 });
 
 const loanIdParams = z.object({ loanId: z.string().uuid() });
@@ -34,31 +38,82 @@ function uniqueLoanNumber(): string {
   return `LN-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${randomUUID().slice(0, 8).toUpperCase()}`;
 }
 
-function canReadLoan(user: { sub: string; role: string }, loan: { borrowerId: string }): boolean {
-  return loan.borrowerId === user.sub || user.role === UserRole.STAFF || user.role === UserRole.ADMIN;
+function canReadLoan(userId: string, permissions: string[], loan: { borrowerId: string }): boolean {
+  return loan.borrowerId === userId || permissions.includes(Permissions.loansRead);
 }
 
 export async function registerLoanRoutes(app: FastifyInstance, config: AppConfig): Promise<void> {
   app.get('/loan-products/current', {
     schema: { tags: ['Loan products'], summary: 'Get the active loan product rules' },
-  }, async () => loanPolicy);
+  }, async (_request, reply) => {
+    const product = await getActiveLoanProduct();
+    if (!product) {
+      return reply.code(503).send({ error: 'LOAN_PRODUCT_UNAVAILABLE', message: 'No active loan package is available.' });
+    }
+    return { product: serializeLoanProduct(product) };
+  });
+
+  app.get('/loan-products', {
+    schema: { tags: ['Loan products'], summary: 'List active loan packages' },
+  }, async () => {
+    const products = await prisma.loanProduct.findMany({ where: { isActive: true }, orderBy: [{ isDefault: 'desc' }, { name: 'asc' }] });
+    return { products: products.map(serializeLoanProduct) };
+  });
 
   app.post('/loans', {
     onRequest: [requireAuthentication],
     schema: { tags: ['Loans'], summary: 'Submit a loan application' },
   }, async (request, reply) => {
     const body = applicationSchema.parse(request.body);
-    const quote = calculateLoanQuote(body.amount, body.termMonths);
-    const schedule = createRepaymentSchedule(body.amount, body.termMonths);
+    const product = await getActiveLoanProduct(body.productId);
+    if (!product) {
+      return reply.code(400).send({ error: 'INVALID_LOAN_PRODUCT', message: 'The selected loan package is unavailable.' });
+    }
+    const existingPendingLoan = await prisma.loan.findFirst({
+      where: {
+        borrowerId: request.user.sub,
+        status: LoanStatus.PENDING,
+        submittedAt: { not: null },
+      },
+      select: { id: true, loanNumber: true },
+    });
+    if (existingPendingLoan) {
+      return reply.code(409).send({
+        error: 'PENDING_LOAN_EXISTS',
+        message: `Loan ${existingPendingLoan.loanNumber} is still pending. Wait for a decision before applying again.`,
+      });
+    }
+    const policy = productToPolicy(product);
+    let quote;
+    let schedule;
+    try {
+      quote = calculateLoanQuote(body.amount, body.termMonths, policy);
+      schedule = createRepaymentSchedule(body.amount, body.termMonths, new Date(), policy);
+    } catch (error) {
+      return reply.code(400).send({
+        error: 'INVALID_LOAN_QUOTE',
+        message: error instanceof Error ? error.message : 'The requested loan is outside the active package rules.',
+      });
+    }
 
-    const loan = await prisma.$transaction(async (transaction) => {
-      const createdLoan = await transaction.loan.create({
-        data: {
+    const draft = await prisma.loan.findFirst({
+      where: {
+        borrowerId: request.user.sub,
+        status: LoanStatus.PENDING,
+        submittedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+    let loan;
+    try {
+      loan = await prisma.$transaction(async (transaction) => {
+        const applicationData = {
           loanNumber: uniqueLoanNumber(),
-          currency: loanPolicy.currency,
+          currency: policy.currency,
           principal: quote.principal,
           termMonths: body.termMonths,
-          monthlyInterestRate: loanPolicy.monthlyInterestRate,
+          monthlyInterestRate: policy.monthlyInterestRate,
           interestAmount: quote.interestAmount,
           totalRepayment: quote.totalRepayment,
           monthlyPayment: quote.monthlyPayment,
@@ -75,18 +130,140 @@ export async function registerLoanRoutes(app: FastifyInstance, config: AppConfig
           beneficiaryBank: body.beneficiaryBank,
           accountName: body.accountName,
           accountNumber: body.accountNumber,
-          borrowerId: request.user.sub,
-          repayments: { create: schedule },
-        },
-        include: { repayments: true, documents: true },
+          productId: product.id,
+          submittedAt: null,
+        };
+        if (draft) {
+          await transaction.repayment.deleteMany({ where: { loanId: draft.id } });
+          return transaction.loan.update({
+            where: { id: draft.id },
+            data: {
+              ...applicationData,
+              repayments: { create: schedule },
+            },
+            include: { repayments: true, documents: true },
+          });
+        }
+        return transaction.loan.create({
+          data: {
+            ...applicationData,
+            borrowerId: request.user.sub,
+            repayments: { create: schedule },
+          },
+          include: { repayments: true, documents: true },
+        });
       });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        return reply.code(409).send({
+          error: 'PENDING_LOAN_EXISTS',
+          message: 'You already have a pending loan application.',
+        });
+      }
+      throw error;
+    }
+
+    return reply.status(draft ? 200 : 201).send({ loan: serializeLoan(loan) });
+  });
+
+  app.post('/loans/:loanId/submit', {
+    onRequest: [requireAuthentication],
+    schema: { tags: ['Loans'], summary: 'Finalize a loan after every document is uploaded' },
+  }, async (request, reply) => {
+    const { loanId } = loanIdParams.parse(request.params);
+    const loan = await prisma.loan.findUnique({
+      where: { id: loanId },
+      include: { documents: true, repayments: { orderBy: { installment: 'asc' } } },
+    });
+    if (!loan || loan.borrowerId !== request.user.sub) {
+      return reply.code(404).send({ error: 'NOT_FOUND', message: 'Loan draft not found.' });
+    }
+    if (loan.status !== LoanStatus.PENDING) {
+      return reply.code(409).send({ error: 'CONFLICT', message: 'Only pending loan drafts can be submitted.' });
+    }
+    if (loan.submittedAt) {
+      return { loan: serializeLoan(loan) };
+    }
+
+    const requiredDocuments = Object.values(DocumentKind);
+    const uploadedDocuments = new Set(loan.documents.map((document) => document.kind));
+    const missingDocuments = requiredDocuments.filter((kind) => !uploadedDocuments.has(kind));
+    if (missingDocuments.length > 0) {
+      return reply.code(409).send({
+        error: 'DOCUMENTS_INCOMPLETE',
+        message: `Upload every required document before submitting: ${missingDocuments.join(', ')}.`,
+      });
+    }
+    const otherPendingLoan = await prisma.loan.findFirst({
+      where: {
+        borrowerId: request.user.sub,
+        status: LoanStatus.PENDING,
+        submittedAt: { not: null },
+        id: { not: loan.id },
+      },
+      select: { loanNumber: true },
+    });
+    if (otherPendingLoan) {
+      return reply.code(409).send({
+        error: 'PENDING_LOAN_EXISTS',
+        message: `Loan ${otherPendingLoan.loanNumber} is still pending review.`,
+      });
+    }
+
+    const reviewerIds = (await findUserIdsWithPermission(Permissions.loansRead)).filter(
+      (userId) => userId !== request.user.sub,
+    );
+    const submittedLoan = await prisma.$transaction(async (transaction) => {
+      const submittedAt = new Date();
+      const update = await transaction.loan.updateMany({
+        where: { id: loan.id, submittedAt: null, status: LoanStatus.PENDING },
+        data: { submittedAt },
+      });
+      if (update.count !== 1) {
+        return transaction.loan.findUniqueOrThrow({
+          where: { id: loan.id },
+          include: { documents: true, repayments: { orderBy: { installment: 'asc' } } },
+        });
+      }
       await transaction.auditLog.create({
-        data: { actorId: request.user.sub, action: 'LOAN_SUBMITTED', entityType: 'Loan', entityId: createdLoan.id },
+        data: {
+          actorId: request.user.sub,
+          action: 'LOAN_SUBMITTED',
+          entityType: 'Loan',
+          entityId: loan.id,
+        },
       });
-      return createdLoan;
+      await transaction.notification.create({
+        data: {
+          userId: request.user.sub,
+          title: 'Application submitted',
+          body: `Your loan ${loan.loanNumber} is pending review.`,
+          payload: '/home',
+        },
+      });
+      if (reviewerIds.length > 0) {
+        await transaction.notification.createMany({
+          data: reviewerIds.map((userId) => ({
+            userId,
+            title: 'New loan application',
+            body: `${loan.actualName} submitted ${loan.loanNumber} for review.`,
+            payload: '/admin',
+          })),
+        });
+      }
+      return transaction.loan.findUniqueOrThrow({
+        where: { id: loan.id },
+        include: { documents: true, repayments: { orderBy: { installment: 'asc' } } },
+      });
     });
 
-    return reply.status(201).send({ loan: serializeLoan(loan) });
+    void sendPushToUsers(reviewerIds, {
+      title: 'New loan application',
+      body: `${loan.actualName} submitted ${loan.loanNumber} for review.`,
+      payload: '/admin',
+    }).catch((error) => app.log.warn({ err: error }, 'Unable to send reviewer push notification'));
+
+    return { loan: serializeLoan(submittedLoan) };
   });
 
   app.get('/loans', {
@@ -94,7 +271,7 @@ export async function registerLoanRoutes(app: FastifyInstance, config: AppConfig
     schema: { tags: ['Loans'], summary: 'List the signed-in customer loans' },
   }, async (request) => {
     const loans = await prisma.loan.findMany({
-      where: { borrowerId: request.user.sub },
+      where: { borrowerId: request.user.sub, submittedAt: { not: null } },
       include: { repayments: { orderBy: { installment: 'asc' } }, documents: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -110,7 +287,7 @@ export async function registerLoanRoutes(app: FastifyInstance, config: AppConfig
       where: { id: loanId },
       include: { repayments: { orderBy: { installment: 'asc' } }, documents: true },
     });
-    if (!loan || !canReadLoan(request.user, loan)) {
+    if (!loan || !canReadLoan(request.user.sub, request.permissions, loan)) {
       return reply.code(404).send({ error: 'NOT_FOUND', message: 'Loan not found.' });
     }
     return { loan: serializeLoan(loan) };
@@ -134,7 +311,8 @@ export async function registerLoanRoutes(app: FastifyInstance, config: AppConfig
       return reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'A document file is required.' });
     }
     const kindValue = upload.fields.kind;
-    const kind = DocumentKindSchema.parse(Array.isArray(kindValue) ? kindValue[0]?.value : kindValue?.value);
+    const kindField = Array.isArray(kindValue) ? kindValue[0] : kindValue;
+    const kind = DocumentKindSchema.parse(kindField?.type === 'field' ? kindField.value : undefined);
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(upload.mimetype)) {
       return reply.code(415).send({ error: 'UNSUPPORTED_MEDIA_TYPE', message: 'Only JPG, PNG, and WEBP images are accepted.' });
     }
@@ -158,7 +336,7 @@ export async function registerLoanRoutes(app: FastifyInstance, config: AppConfig
       where: { id: params.documentId, loanId: params.loanId },
       include: { loan: { select: { borrowerId: true } } },
     });
-    if (!document || !canReadLoan(request.user, document.loan)) {
+    if (!document || !canReadLoan(request.user.sub, request.permissions, document.loan)) {
       return reply.code(404).send({ error: 'NOT_FOUND', message: 'Document not found.' });
     }
     const content = await readPrivateDocument(config, document.storageKey);
@@ -166,12 +344,15 @@ export async function registerLoanRoutes(app: FastifyInstance, config: AppConfig
   });
 
   app.get('/admin/loans', {
-    onRequest: [requireRoles(UserRole.STAFF, UserRole.ADMIN)],
+    onRequest: [requirePermission(Permissions.loansRead)],
     schema: { tags: ['Staff'], summary: 'List loan applications for review' },
   }, async (request) => {
     const query = z.object({ status: z.nativeEnum(LoanStatus).optional() }).parse(request.query);
     const loans = await prisma.loan.findMany({
-      where: query.status ? { status: query.status } : undefined,
+      where: {
+        submittedAt: { not: null },
+        ...(query.status ? { status: query.status } : {}),
+      },
       include: { borrower: { select: { id: true, fullName: true, email: true } }, documents: true },
       orderBy: { createdAt: 'asc' },
     });
@@ -179,7 +360,7 @@ export async function registerLoanRoutes(app: FastifyInstance, config: AppConfig
   });
 
   app.patch('/admin/loans/:loanId/status', {
-    onRequest: [requireRoles(UserRole.STAFF, UserRole.ADMIN)],
+    onRequest: [requirePermission(Permissions.loansReview)],
     schema: { tags: ['Staff'], summary: 'Approve or reject a pending loan' },
   }, async (request, reply) => {
     const { loanId } = loanIdParams.parse(request.params);
@@ -188,13 +369,13 @@ export async function registerLoanRoutes(app: FastifyInstance, config: AppConfig
     if (!loan) {
       return reply.code(404).send({ error: 'NOT_FOUND', message: 'Loan not found.' });
     }
-    if (loan.status !== LoanStatus.PENDING) {
+    if (loan.status !== LoanStatus.PENDING || !loan.submittedAt) {
       return reply.code(409).send({ error: 'CONFLICT', message: 'Only pending loans can be reviewed.' });
     }
 
     const updatedLoan = await prisma.$transaction(async (transaction) => {
-      const reviewedLoan = await transaction.loan.update({
-        where: { id: loanId },
+      const update = await transaction.loan.updateMany({
+        where: { id: loanId, status: LoanStatus.PENDING },
         data: {
           status: body.status,
           reviewerNote: body.reviewerNote,
@@ -202,6 +383,10 @@ export async function registerLoanRoutes(app: FastifyInstance, config: AppConfig
           disbursedAt: body.status === LoanStatus.APPROVED ? new Date() : null,
         },
       });
+      if (update.count !== 1) {
+        return null;
+      }
+      const reviewedLoan = await transaction.loan.findUniqueOrThrow({ where: { id: loanId } });
       if (body.status === LoanStatus.APPROVED) {
         await transaction.transaction.create({
           data: {
@@ -220,7 +405,7 @@ export async function registerLoanRoutes(app: FastifyInstance, config: AppConfig
           userId: loan.borrowerId,
           title: body.status === LoanStatus.APPROVED ? 'Loan approved' : 'Loan application update',
           body: body.status === LoanStatus.APPROVED ? `Your loan ${loan.loanNumber} has been approved.` : `Your loan ${loan.loanNumber} was not approved.`,
-          payload: `/loan/${loan.id}`,
+          payload: '/home',
         },
       });
       await transaction.auditLog.create({
@@ -228,6 +413,18 @@ export async function registerLoanRoutes(app: FastifyInstance, config: AppConfig
       });
       return reviewedLoan;
     });
+    if (!updatedLoan) {
+      return reply.code(409).send({ error: 'CONFLICT', message: 'This loan was already reviewed.' });
+    }
+    const notificationTitle = body.status === LoanStatus.APPROVED ? 'Loan approved' : 'Loan application update';
+    const notificationBody = body.status === LoanStatus.APPROVED
+      ? `Your loan ${loan.loanNumber} has been approved.`
+      : `Your loan ${loan.loanNumber} was not approved.`;
+    void sendPushToUsers([loan.borrowerId], {
+      title: notificationTitle,
+      body: notificationBody,
+      payload: '/home',
+    }).catch((error) => app.log.warn({ err: error }, 'Unable to send borrower push notification'));
     return { loan: serializeLoan(updatedLoan) };
   });
 }

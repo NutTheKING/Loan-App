@@ -1,37 +1,40 @@
 import 'dart:async';
-import 'dart:io';
-import 'package:get/get.dart';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 
 class InternetConnectionController extends GetxController {
   final isConnected = true.obs;
-
-  late StreamSubscription connectivitySubscription;
+  late final StreamSubscription<List<ConnectivityResult>>
+  _connectivitySubscription;
 
   @override
   void onInit() {
     super.onInit();
     _checkConnection();
-
-    connectivitySubscription = Connectivity().onConnectivityChanged.listen((_) {
-      _checkConnection();
-    });
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
+      _updateConnectionState,
+    );
   }
 
   Future<void> _checkConnection() async {
-    try {
-      // Check internet using DNS lookup
-      final result = await InternetAddress.lookup('google.com').timeout(const Duration(seconds: 2));
+    final connectivityResults = await Connectivity().checkConnectivity();
+    _updateConnectionState(connectivityResults);
+  }
 
-      isConnected.value = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-    } catch (_) {
-      isConnected.value = false;
+  void _updateConnectionState(List<ConnectivityResult> connectivityResults) {
+    if (kIsWeb) {
+      isConnected.value = true;
+      return;
     }
+
+    isConnected.value = !connectivityResults.contains(ConnectivityResult.none);
   }
 
   @override
   void onClose() {
-    connectivitySubscription.cancel();
+    _connectivitySubscription.cancel();
     super.onClose();
   }
 }

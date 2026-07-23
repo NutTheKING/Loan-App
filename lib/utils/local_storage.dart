@@ -4,6 +4,9 @@ class LocalStorage {
   static const accessTokenKey = 'access_token';
   static const refreshTokenKey = 'refresh_token';
   static const userNameKey = 'user_name';
+  static const userEmailKey = 'user_email';
+  static const userRoleKey = 'user_role';
+  static const userPermissionsKey = 'user_permissions';
 
   static SharedPreferences? _prefs;
 
@@ -69,6 +72,9 @@ class LocalStorage {
       removeData(accessTokenKey),
       removeData(refreshTokenKey),
       removeData(userNameKey),
+      removeData(userEmailKey),
+      removeData(userRoleKey),
+      removeData(userPermissionsKey),
     ]);
   }
 

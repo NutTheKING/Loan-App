@@ -3,121 +3,119 @@ import 'package:loan_app/themes/app_color.dart';
 import 'package:loan_app/themes/app_text_theme.dart';
 
 class ThemeBase {
-  // 🌞 LIGHT THEME
-  static ThemeData light() {
-    return ThemeData(
-      brightness: Brightness.light,
-      primaryColor: AppColors.primary,
-      scaffoldBackgroundColor: AppColors.cool,
-      fontFamily: "DMSans",
+  static ThemeData light() => _theme(Brightness.light);
+  static ThemeData dark() => _theme(Brightness.dark);
 
-      colorScheme: ColorScheme.light(primary: AppColors.primary, secondary: AppColors.impact, surface: AppColors.cool),
-
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.cool,
-        elevation: 0,
-        iconTheme: IconThemeData(color: AppColors.strength),
-        titleTextStyle: TextStyle(fontFamily: "Larken", fontSize: 20, color: AppColors.strength),
-      ),
-
-      cardTheme: CardThemeData(
-        color: AppColors.cool,
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.strength,
-      ),
-
-      textTheme: AppTextTheme.textTheme,
+  static ThemeData _theme(Brightness brightness) {
+    final dark = brightness == Brightness.dark;
+    final scheme = ColorScheme(
+      brightness: brightness,
+      primary: dark ? const Color(0xFF53E7EC) : const Color(0xFF007F87),
+      onPrimary: dark ? AppColors.strength : Colors.white,
+      primaryContainer: dark
+          ? const Color(0xFF004F54)
+          : const Color(0xFFC9F7F8),
+      onPrimaryContainer: dark
+          ? const Color(0xFFB8F3F5)
+          : const Color(0xFF00373B),
+      secondary: dark ? const Color(0xFFB9A4FF) : AppColors.impact,
+      onSecondary: dark ? const Color(0xFF26007B) : Colors.white,
+      secondaryContainer: dark
+          ? const Color(0xFF3B148D)
+          : const Color(0xFFE9E1FF),
+      onSecondaryContainer: dark
+          ? const Color(0xFFE8DEFF)
+          : const Color(0xFF25006E),
+      tertiary: dark ? const Color(0xFFFFB1C6) : AppColors.potential,
+      onTertiary: dark ? const Color(0xFF650027) : Colors.white,
+      tertiaryContainer: dark
+          ? const Color(0xFF8F003A)
+          : const Color(0xFFFFD9E2),
+      onTertiaryContainer: dark
+          ? const Color(0xFFFFD9E2)
+          : const Color(0xFF3F0017),
+      error: dark ? const Color(0xFFFFB4AB) : const Color(0xFFB42318),
+      onError: dark ? const Color(0xFF690005) : Colors.white,
+      errorContainer: dark ? const Color(0xFF93000A) : const Color(0xFFFFDAD6),
+      onErrorContainer: dark
+          ? const Color(0xFFFFDAD6)
+          : const Color(0xFF410002),
+      surface: dark ? const Color(0xFF17181F) : AppColors.cool,
+      onSurface: dark ? const Color(0xFFE6E1E9) : AppColors.strength,
+      surfaceContainerHighest: dark
+          ? const Color(0xFF30313A)
+          : const Color(0xFFE7ECEF),
+      onSurfaceVariant: dark
+          ? const Color(0xFFCAC4D0)
+          : const Color(0xFF53565F),
+      outline: dark ? const Color(0xFF948F99) : const Color(0xFF74777F),
+      outlineVariant: dark ? const Color(0xFF49454F) : const Color(0xFFC4C7CE),
+      shadow: Colors.black,
+      scrim: Colors.black,
+      inverseSurface: dark ? const Color(0xFFE6E1E9) : const Color(0xFF303039),
+      onInverseSurface: dark
+          ? const Color(0xFF303039)
+          : const Color(0xFFF5EFF7),
+      inversePrimary: dark ? const Color(0xFF007F87) : const Color(0xFF53E7EC),
+      surfaceTint: dark ? const Color(0xFF53E7EC) : const Color(0xFF007F87),
     );
-  }
-
-  // 🌚 DARK THEME
-  static ThemeData dark() {
     return ThemeData(
-      brightness: Brightness.dark,
-      primaryColor: AppColors.primary,
-      scaffoldBackgroundColor: AppColors.strength,
-      fontFamily: "DMSans",
-
-      colorScheme: ColorScheme.dark(
-        primary: AppColors.primary,
-        secondary: AppColors.impact,
-        surface: AppColors.strength,
+      useMaterial3: true,
+      brightness: brightness,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: scheme.surface,
+      fontFamily: 'AppSans',
+      textTheme: AppTextTheme.textTheme.apply(
+        bodyColor: scheme.onSurface,
+        displayColor: scheme.onSurface,
       ),
-
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.strength,
+      appBarTheme: AppBarTheme(
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
         elevation: 0,
-        iconTheme: IconThemeData(color: AppColors.cool),
-        titleTextStyle: TextStyle(fontFamily: "Larken", fontSize: 20, color: AppColors.cool),
+        centerTitle: false,
       ),
-
       cardTheme: CardThemeData(
-        color: AppColors.impact.withOpacity(.15),
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        color: dark ? const Color(0xFF20212A) : Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: scheme.outlineVariant),
+        ),
       ),
-
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.strength,
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: dark ? const Color(0xFF20212A) : Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: scheme.outlineVariant),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
       ),
-
-      textTheme: AppTextTheme.textTheme.apply(bodyColor: AppColors.cool, displayColor: AppColors.cool),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, 54),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          minimumSize: const Size(0, 54),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+      ),
     );
   }
 }
-
-// import 'package:flutter/material.dart';
-// import 'package:flutter/services.dart';
-// import '../core/constants.dart';
-
-// class AppTheme {
-//   ThemeData lightTheme = ThemeData(
-//     brightness: Brightness.light,
-//     primaryColor: AppColors.primary,
-//     scaffoldBackgroundColor: AppColors.homeBackground,
-//     fontFamily: 'Roboto',
-//     appBarTheme: const AppBarTheme(
-//       elevation: 0,
-//       backgroundColor: AppColors.homeBackground,
-//       iconTheme: IconThemeData(color: Colors.black87),
-//     ),
-//   );
-
-//   static ThemeData darkTheme = ThemeData(
-//     brightness: Brightness.dark,
-//     primaryColor: AppColors.primary,
-//     scaffoldBackgroundColor: Colors.black,
-//     appBarTheme: const AppBarTheme(elevation: 0),
-//   );
-// }
-
-// ThemeData theme() {
-//   return ThemeData.light().copyWith(
-//     primaryColor: AppColors.primary,
-//     appBarTheme: AppBarTheme(
-//       backgroundColor: Colors.white,
-//       centerTitle: true,
-//       systemOverlayStyle: SystemUiOverlayStyle.dark,
-//       iconTheme: const IconThemeData(color: Colors.black),
-//       titleTextStyle: TextStyle(
-//         // fontFamily: local.toLowerCase() == 'khm'
-//         //     ? 'nokora_regular'
-//         //     : Platform.isAndroid
-//         //         ? 'roboto_regular'
-//         //         : Platform.isAndroid
-//         //             ? 'roboto_regular'
-//         //             : 'sf_pro_display',
-//         fontSize: 20,
-//         fontWeight: FontWeight.bold,
-//       ),
-//       elevation: 1.5,
-//       shadowColor: Colors.white30,
-//     ),
-//   );
-// }

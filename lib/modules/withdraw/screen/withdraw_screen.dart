@@ -17,17 +17,25 @@ class WithdrawScreen extends StatelessWidget {
           children: [
             Obx(
               () => Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 color: Colors.blue.shade50,
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text("Available Balance", style: TextStyle(fontSize: 16)),
+                      const Text(
+                        "Available Balance",
+                        style: TextStyle(fontSize: 16),
+                      ),
                       Text(
                         "₱ ${wc.availableBalance.value.toStringAsFixed(2)}",
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -49,17 +57,26 @@ class WithdrawScreen extends StatelessWidget {
             const SizedBox(height: 20),
             Obx(
               () => DropdownButtonFormField<String>(
-                initialValue: wc.selectedMethod.value.isEmpty ? null : wc.selectedMethod.value,
-                decoration: const InputDecoration(labelText: "Withdrawal Method", border: OutlineInputBorder()),
-                items: wc.methods.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
+                initialValue: wc.selectedMethod.value.isEmpty
+                    ? null
+                    : wc.selectedMethod.value,
+                decoration: const InputDecoration(
+                  labelText: "Withdrawal Method",
+                  border: OutlineInputBorder(),
+                ),
+                items: wc.methods
+                    .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                    .toList(),
                 onChanged: (val) => wc.selectedMethod.value = val ?? '',
               ),
             ),
             const Spacer(),
             Obx(
               () => ElevatedButton(
-                onPressed: wc.isValid() ? wc.submit : null,
-                style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+                onPressed: wc.isValid ? wc.submit : null,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                ),
                 child: const Text("Confirm Withdrawal"),
               ),
             ),

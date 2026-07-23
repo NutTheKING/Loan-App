@@ -9,10 +9,24 @@ class LoanApi {
 
   final ApiClient _client;
 
+  Future<Map<String, dynamic>> currentProduct() async {
+    final response = await _client.get('/loan-products/current');
+    return Map<String, dynamic>.from(response['product'] as Map);
+  }
+
+  Future<bool> hasPendingLoan() async {
+    final response = await _client.get('/dashboard');
+    return response['hasPendingLoan'] == true;
+  }
+
   Future<String> submitApplication(Map<String, Object> application) async {
     final response = await _client.post('/loans', data: application);
     final loan = Map<String, dynamic>.from(response['loan'] as Map);
     return loan['id'] as String;
+  }
+
+  Future<void> completeApplication(String loanId) async {
+    await _client.post('/loans/$loanId/submit');
   }
 
   Future<void> uploadImage({

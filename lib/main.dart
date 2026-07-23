@@ -6,12 +6,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:loan_app/firebase_options.dart';
+import 'package:loan_app/core/notifications/push_notification_service.dart';
 import 'package:loan_app/modules/connection/controller/internet_connection_controller.dart';
 import 'package:loan_app/modules/connection/screen/no_internet_page.dart';
 import 'package:loan_app/routers/app_router.dart';
 import 'package:loan_app/themes/app_theme.dart';
 import 'package:loan_app/utils/local_storage.dart';
 import 'package:loan_app/utils/service/android_notification_helper.dart';
+import 'package:loan_app/widgets/responsive_app_frame.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +23,7 @@ void main() async {
   if (!kIsWeb) {
     await AndroidNotificationHelper.instance.init();
   }
+  await PushNotificationService.instance.initialize();
 
   await dotenv.load();
   _setupDevicePreference();
@@ -31,11 +34,9 @@ void main() async {
 Future<void> _handleInitialMessage() async {
   final RemoteMessage? message = await FirebaseMessaging.instance
       .getInitialMessage();
-  String? payload = message?.data['payload'];
-  debugPrint('Notification 1');
+  final String? payload = message?.data['payload'];
   if (payload != null) {
     appRouter.go(payload);
-    // adminRouter.
   }
 }
 
@@ -64,38 +65,40 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final connection = Get.find<InternetConnectionController>();
+    if (kIsWeb) {
+      return _buildApplication(context);
+    }
 
+    final connection = Get.find<InternetConnectionController>();
     return Obx(() {
       if (!connection.isConnected.value) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          home: NoInternetPage(),
+          home: const NoInternetPage(),
         );
       }
 
-      return GestureDetector(
-        onTap: () => unFocus(context),
-        child: GetMaterialApp.router(
-          debugShowCheckedModeBanner: false,
-          theme: ThemeBase.light(),
-          themeMode: ThemeMode.system,
-          darkTheme: ThemeBase.dark(),
-          routeInformationProvider: appRouter.routeInformationProvider,
-          routeInformationParser: appRouter.routeInformationParser,
-          routerDelegate: appRouter.routerDelegate,
-        ),
-      );
+      return _buildApplication(context);
     });
-    // return ConnectivityWrapper(
-    //   child: GetMaterialApp.router(
-    //     debugShowCheckedModeBanner: false,
-    //     routeInformationProvider: appRouter.routeInformationProvider,
-    //     routeInformationParser: appRouter.routeInformationParser,
-    //     routerDelegate: appRouter.routerDelegate,
-    //     theme: theme(),
-    //   ),
-    // );
+  }
+
+  Widget _buildApplication(BuildContext context) {
+    return GestureDetector(
+      onTap: () => unFocus(context),
+      child: GetMaterialApp.router(
+        debugShowCheckedModeBanner: false,
+        theme: ThemeBase.light(),
+        themeMode: ThemeMode.system,
+        darkTheme: ThemeBase.dark(),
+        routeInformationProvider: appRouter.routeInformationProvider,
+        routeInformationParser: appRouter.routeInformationParser,
+        routerDelegate: appRouter.routerDelegate,
+        builder: (context, child) => ResponsiveAppFrame(
+          router: appRouter,
+          child: child ?? const SizedBox.shrink(),
+        ),
+      ),
+    );
   }
 }
 

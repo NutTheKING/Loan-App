@@ -4,12 +4,21 @@ class AuthUser {
     required this.email,
     required this.fullName,
     required this.role,
+    required this.permissions,
+    this.idNumber,
+    this.createdAt,
   });
 
   final String id;
   final String email;
   final String fullName;
   final String role;
+  final List<String> permissions;
+  final String? idNumber;
+  final DateTime? createdAt;
+
+  bool hasPermission(String permission) => permissions.contains(permission);
+  bool get canAccessAdmin => hasPermission('dashboard.view');
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     return AuthUser(
@@ -17,6 +26,11 @@ class AuthUser {
       email: json['email'] as String,
       fullName: json['fullName'] as String,
       role: json['role'] as String,
+      permissions: (json['permissions'] as List? ?? const [])
+          .whereType<String>()
+          .toList(),
+      idNumber: json['idNumber'] as String?,
+      createdAt: DateTime.tryParse('${json['createdAt'] ?? ''}'),
     );
   }
 }

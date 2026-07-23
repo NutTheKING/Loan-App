@@ -11,28 +11,24 @@ class AndroidNotificationHelper {
 
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
-  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   ///ID for All Notification (Unique)
   int _id = 0;
 
   ///Android Notificaion Icon Setup
-  final AndroidInitializationSettings _initializationSettingsAndroid = const AndroidInitializationSettings(
-    _notificationIcon,
-  );
+  final AndroidInitializationSettings _initializationSettingsAndroid =
+      const AndroidInitializationSettings(_notificationIcon);
 
   Future<void> init() async {
     await _requestNotificationPermission();
     await _initLocalNotificationSetting();
-    _messaging.getToken().then((value) => print('Firebase Token : $value'));
-    _onClickMessageOpenedApp();
-    _onListenting();
   }
 
   Future<void> _initLocalNotificationSetting() async {
-    final InitializationSettings initializationSettings = InitializationSettings(
-      android: _initializationSettingsAndroid,
-    );
+    final InitializationSettings initializationSettings =
+        InitializationSettings(android: _initializationSettingsAndroid);
     await _flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (details) {
@@ -44,21 +40,6 @@ class AndroidNotificationHelper {
         }
       },
     );
-  }
-
-  ///Listen to firebase notification when app is on foreground
-  void _onListenting() {
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-      debugPrint('Message Data ${message.notification?.title}');
-
-      if (message.notification != null) {
-        final title = message.notification?.title;
-        final body = message.notification?.body;
-        final payload = message.data['payload'];
-
-        await showNotification(title, body, payload: payload);
-      }
-    });
   }
 
   Future<NotificationSettings> _requestNotificationPermission() async {
@@ -74,7 +55,11 @@ class AndroidNotificationHelper {
   }
 
   ///Show local notification
-  Future<void> showNotification(String? title, String? body, {String? payload}) async {
+  Future<void> showNotification(
+    String? title,
+    String? body, {
+    String? payload,
+  }) async {
     _id++;
 
     NotificationDetails androidNotificationDetail = const NotificationDetails(
@@ -90,16 +75,12 @@ class AndroidNotificationHelper {
       ),
     );
 
-    await _flutterLocalNotificationsPlugin.show(_id, title, body, androidNotificationDetail, payload: payload);
-  }
-
-  static void _onClickMessageOpenedApp() {
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      debugPrint('Notification 2');
-      String? payload = message.data['payload'];
-      if (payload != null) {
-        appRouter.go(payload);
-      }
-    });
+    await _flutterLocalNotificationsPlugin.show(
+      _id,
+      title,
+      body,
+      androidNotificationDetail,
+      payload: payload,
+    );
   }
 }

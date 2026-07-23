@@ -3,12 +3,15 @@ import type { FastifyInstance } from 'fastify';
 import type { User, UserRole } from '@prisma/client';
 
 import { prisma } from './prisma.js';
+import { getEffectivePermissions } from './permissions.js';
 
 const refreshTokenLifetimeDays = 30;
 
-export type PublicUser = Pick<User, 'id' | 'email' | 'fullName' | 'idNumber' | 'role' | 'createdAt'>;
+export type PublicUser = Pick<User, 'id' | 'email' | 'fullName' | 'idNumber' | 'role' | 'createdAt'> & {
+  permissions: string[];
+};
 
-export function publicUser(user: User): PublicUser {
+export async function publicUser(user: User): Promise<PublicUser> {
   return {
     id: user.id,
     email: user.email,
@@ -16,6 +19,7 @@ export function publicUser(user: User): PublicUser {
     idNumber: user.idNumber,
     role: user.role,
     createdAt: user.createdAt,
+    permissions: await getEffectivePermissions(user.id, user.role),
   };
 }
 
@@ -27,16 +31,36 @@ export function hashRefreshToken(token: string): string {
   return createHmac('sha256', refreshTokenSecret).update(token).digest('base64url');
 }
 
-export async function createSession(app: FastifyInstance, user: User): Promise<{ accessToken: string; refreshToken: string }> {
-  const payload = { sub: user.id, email: user.email, role: user.role as UserRole };
-  const accessToken = await app.jwt.sign(payload, { expiresIn: '15m' });
-  const refreshToken = randomBytes(48).toString('base64url');
-  const expiresAt = new Date(Date.now() + refreshTokenLifetimeDays * 24 * 60 * 60 * 1000);
+function refreshTokenExpiry(): Date {
+  return new Date(Date.now() + refreshTokenLifetimeDays * 24 * 60 * 60 * 1000);
+}
 
-  await prisma.refreshToken.create({
-    data: { userId: user.id, tokenHash: hashRefreshToken(refreshToken), expiresAt },
+async function signAccessToken(app: FastifyInstance, user: User, sessionId: string): Promise<string> {
+  const payload = { sub: user.id, sid: sessionId, email: user.email, role: user.role as UserRole };
+  return app.jwt.sign(payload, { expiresIn: '15m' });
+}
+
+export async function createSession(app: FastifyInstance, user: User): Promise<{ accessToken: string; refreshToken: string }> {
+  const refreshToken = randomBytes(48).toString('base64url');
+  const now = new Date();
+  const storedSession = await prisma.$transaction(async (transaction) => {
+    await transaction.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${user.id}::uuid FOR UPDATE`;
+    await transaction.refreshToken.deleteMany({ where: { userId: user.id } });
+    await transaction.deviceToken.deleteMany({ where: { userId: user.id } });
+    await transaction.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: now, lastSeenAt: now, lastLogoutAt: null },
+    });
+    return transaction.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: hashRefreshToken(refreshToken),
+        expiresAt: refreshTokenExpiry(),
+      },
+    });
   });
 
+  const accessToken = await signAccessToken(app, user, storedSession.id);
   return { accessToken, refreshToken };
 }
 
@@ -51,7 +75,22 @@ export async function rotateSession(app: FastifyInstance, refreshToken: string):
     return null;
   }
 
-  await prisma.refreshToken.update({ where: { id: storedToken.id }, data: { revokedAt: new Date() } });
-  const nextSession = await createSession(app, storedToken.user);
-  return { ...nextSession, user: storedToken.user };
+  const nextRefreshToken = randomBytes(48).toString('base64url');
+  const rotated = await prisma.refreshToken.updateMany({
+    where: { id: storedToken.id, tokenHash, revokedAt: null },
+    data: {
+      tokenHash: hashRefreshToken(nextRefreshToken),
+      expiresAt: refreshTokenExpiry(),
+    },
+  });
+  if (rotated.count !== 1) {
+    return null;
+  }
+
+  await prisma.user.update({
+    where: { id: storedToken.userId },
+    data: { lastSeenAt: new Date() },
+  });
+  const accessToken = await signAccessToken(app, storedToken.user, storedToken.id);
+  return { accessToken, refreshToken: nextRefreshToken, user: storedToken.user };
 }
