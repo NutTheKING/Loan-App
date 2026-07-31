@@ -419,6 +419,8 @@ class AdminTransaction {
     required this.customerId,
     required this.customerName,
     required this.customerEmail,
+    this.customerPhone,
+    this.customerIdNumber,
     this.loanNumber,
     this.reviewReason,
     this.reviewedAt,
@@ -436,6 +438,8 @@ class AdminTransaction {
   final String customerId;
   final String customerName;
   final String customerEmail;
+  final String? customerPhone;
+  final String? customerIdNumber;
   final String? loanNumber;
   final String? reviewReason;
   final DateTime? reviewedAt;
@@ -468,6 +472,8 @@ class AdminTransaction {
       customerId: user['id'] as String? ?? json['userId'] as String? ?? '',
       customerName: user['fullName'] as String? ?? 'Unknown customer',
       customerEmail: user['email'] as String? ?? '',
+      customerPhone: user['phone'] as String?,
+      customerIdNumber: user['idNumber'] as String?,
       loanNumber: loan['loanNumber'] as String?,
       reviewReason: json['reviewReason'] as String?,
       reviewedAt: DateTime.tryParse('${json['reviewedAt'] ?? ''}'),

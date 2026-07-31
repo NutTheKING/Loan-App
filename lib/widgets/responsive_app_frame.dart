@@ -23,7 +23,10 @@ class ResponsiveAppFrame extends StatelessWidget {
       animation: router.routeInformationProvider,
       child: child,
       builder: (context, child) {
-        final path = router.routerDelegate.currentConfiguration.uri.path;
+        final routePath = router.routeInformationProvider.value.uri.path;
+        final delegatePath =
+            router.routerDelegate.currentConfiguration.uri.path;
+        final path = routePath == '/' ? delegatePath : routePath;
         if (path.startsWith('/admin')) {
           return child!;
         }

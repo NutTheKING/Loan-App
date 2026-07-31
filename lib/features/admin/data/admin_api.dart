@@ -88,9 +88,25 @@ class AdminApi {
   Future<List<Map<String, dynamic>>> repayments() =>
       _list('/admin/repayments', 'repayments');
 
-  Future<List<AdminTransaction>> transactions() async {
-    final response = await _client.get('/admin/transactions');
+  Future<List<AdminTransaction>> transactions({
+    String? type,
+    String? status,
+  }) async {
+    final response = await _client.get(
+      '/admin/transactions',
+      queryParameters: {
+        if (type != null) 'type': type,
+        if (status != null) 'status': status,
+      },
+    );
     return _typedList(response['transactions'], AdminTransaction.fromJson);
+  }
+
+  Future<AdminTransaction> transactionDetail(String transactionId) async {
+    final response = await _client.get('/admin/transactions/$transactionId');
+    return AdminTransaction.fromJson(
+      Map<String, dynamic>.from(response['transaction'] as Map),
+    );
   }
 
   Future<void> createDeposit({

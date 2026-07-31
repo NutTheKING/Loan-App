@@ -6,12 +6,16 @@ import { prisma } from '../lib/prisma.js';
 import { createSession, hashRefreshToken, publicUser, rotateSession } from '../lib/tokens.js';
 import { requireAuthentication } from '../plugins/auth.js';
 
-const credentialsSchema = z.object({
-  email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
-  password: z.string().min(12, 'Password must contain at least 12 characters.').max(128),
+const emailSchema = z.string().trim().email().max(254).transform((value) => value.toLowerCase());
+
+const loginSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, 'Password is required.').max(128),
 });
 
-const registrationSchema = credentialsSchema.extend({
+const registrationSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(12, 'Password must contain at least 12 characters.').max(128),
   fullName: z.string().trim().min(2).max(120),
   phone: z.string().trim().min(7).max(30).refine(
     (value) => value.replace(/\D/g, '').length >= 7,
@@ -34,18 +38,18 @@ const registrationSchema = credentialsSchema.extend({
   }
 });
 
-const credentialsBodySchema = {
+const loginBodySchema = {
   type: 'object',
   additionalProperties: false,
   required: ['email', 'password'],
   properties: {
     email: { type: 'string', format: 'email', maxLength: 254 },
-    password: { type: 'string', minLength: 12, maxLength: 128 },
+    password: { type: 'string', minLength: 1, maxLength: 128 },
   },
 } as const;
 
 const registrationBodySchema = {
-  ...credentialsBodySchema,
+  ...loginBodySchema,
   required: [
     'fullName',
     'email',
@@ -59,9 +63,9 @@ const registrationBodySchema = {
   ],
   properties: {
     fullName: { type: 'string', minLength: 2, maxLength: 120 },
-    email: credentialsBodySchema.properties.email,
+    email: loginBodySchema.properties.email,
     phone: { type: 'string', minLength: 7, maxLength: 30 },
-    password: credentialsBodySchema.properties.password,
+    password: { type: 'string', minLength: 12, maxLength: 128 },
     idNumber: { type: 'string', minLength: 4, maxLength: 64 },
     dateOfBirth: { type: 'string', format: 'date' },
     gender: { type: 'string', enum: ['Male', 'Female', 'Other'] },
@@ -108,10 +112,10 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     schema: {
       tags: ['Authentication'],
       summary: 'Sign in with email and password',
-      body: credentialsBodySchema,
+      body: loginBodySchema,
     },
   }, async (request, reply) => {
-    const body = credentialsSchema.parse(request.body);
+    const body = loginSchema.parse(request.body);
     const user = await prisma.user.findUnique({ where: { email: body.email } });
     const validPassword = user && user.isActive && await verifyPassword(body.password, user.passwordHash);
     if (!validPassword || !user) {

@@ -113,6 +113,16 @@ class _SignInScreenState extends State<SignInScreen> {
                         child: const Text('Forgot password?'),
                       ),
                     ),
+                    Obx(
+                      () => controller.errorMessage.value.isEmpty
+                          ? const SizedBox.shrink()
+                          : Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _LoginErrorMessage(
+                                message: controller.errorMessage.value,
+                              ),
+                            ),
+                    ),
                     const SizedBox(height: 10),
                     Obx(() {
                       final canSignIn =
@@ -172,6 +182,32 @@ class _SignInScreenState extends State<SignInScreen> {
         SnackBar(content: Text('Welcome back, ${user.fullName}.')),
       );
       context.go(user.canAccessAdmin ? '/admin' : '/home');
+    } else if (context.mounted && controller.errorMessage.value.isNotEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(controller.errorMessage.value)));
     }
   }
+}
+
+class _LoginErrorMessage extends StatelessWidget {
+  const _LoginErrorMessage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.errorContainer,
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.error_outline_rounded),
+        const SizedBox(width: 10),
+        Expanded(child: Text(message)),
+      ],
+    ),
+  );
 }

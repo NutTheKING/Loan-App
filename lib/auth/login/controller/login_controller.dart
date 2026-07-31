@@ -5,14 +5,17 @@ import 'package:loan_app/core/auth/auth_session.dart';
 import 'package:loan_app/features/auth/data/auth_api.dart';
 
 class SignInController extends GetxController {
+  SignInController({AuthApi? authApi}) : _authApi = authApi ?? AuthApi();
+
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  final _authApi = AuthApi();
+  final AuthApi _authApi;
 
   RxBool hidePassword = true.obs;
   RxBool loading = false.obs;
   RxBool loginSuccess = false.obs;
   RxBool formIsValid = false.obs;
+  RxString errorMessage = ''.obs;
 
   @override
   void onInit() {
@@ -26,7 +29,7 @@ class SignInController extends GetxController {
   void _validateForm() {
     formIsValid.value =
         GetUtils.isEmail(emailController.text.trim()) &&
-        passwordController.text.length >= 12;
+        passwordController.text.isNotEmpty;
   }
 
   Future<AuthUser?> signIn() async {
@@ -35,6 +38,7 @@ class SignInController extends GetxController {
     }
     loading.value = true;
     loginSuccess.value = false;
+    errorMessage.value = '';
 
     try {
       final session = await _authApi.signIn(
@@ -44,23 +48,11 @@ class SignInController extends GetxController {
       loginSuccess.value = true;
       return session.user;
     } on ApiException catch (error) {
-      Get.snackbar(
-        'Login failed',
-        error.message,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
+      errorMessage.value = error.message;
       return null;
     } catch (error) {
       debugPrint('Unexpected login failure: $error');
-      Get.snackbar(
-        'Login failed',
-        'Unable to complete sign-in. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
+      errorMessage.value = 'Unable to complete sign-in. Please try again.';
       return null;
     } finally {
       loading.value = false;

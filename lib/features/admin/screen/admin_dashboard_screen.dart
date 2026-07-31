@@ -41,6 +41,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         if (user == null) {
           return const Center(child: CircularProgressIndicator());
         }
+        final selectedSection = controller.selectedSection.value;
+        final availableSections = controller.availableSections;
+        final sidebarCollapsed = controller.sidebarCollapsed.value;
+        final unreadCount = controller.notifications.unreadCount.value;
+        final pendingWithdrawalCount = controller.pendingWithdrawalCount;
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -66,7 +71,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     tooltip: 'Open menu',
                     icon: const Icon(Icons.menu_rounded),
                     onSelected: controller.selectSection,
-                    itemBuilder: (context) => controller.availableSections
+                    itemBuilder: (context) => availableSections
                         .map(
                           (section) => PopupMenuItem(
                             value: section,
@@ -117,10 +122,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 _AdminSidebar(
                   name: user.fullName,
                   email: user.email,
-                  selectedSection: controller.selectedSection.value,
-                  sections: controller.availableSections,
-                  collapsed: controller.sidebarCollapsed.value,
-                  unreadCount: controller.notifications.unreadCount.value,
+                  selectedSection: selectedSection,
+                  sections: availableSections,
+                  collapsed: sidebarCollapsed,
+                  unreadCount: unreadCount,
+                  pendingWithdrawalCount: pendingWithdrawalCount,
                   onSelectSection: controller.selectSection,
                   onToggle: controller.toggleSidebar,
                   onSignOut: _confirmSignOut,
@@ -557,6 +563,20 @@ class _PortalContent extends StatelessWidget {
           dateTime: dateTime,
           desktop: desktop,
         ),
+        AdminSection.deposits => AdminTransactionsSection(
+          controller: controller,
+          currency: currency,
+          dateTime: dateTime,
+          desktop: desktop,
+          view: AdminTransactionView.deposits,
+        ),
+        AdminSection.withdrawals => AdminTransactionsSection(
+          controller: controller,
+          currency: currency,
+          dateTime: dateTime,
+          desktop: desktop,
+          view: AdminTransactionView.withdrawals,
+        ),
         AdminSection.reports => AdminReportsSection(
           controller: controller,
           currency: currency,
@@ -734,7 +754,7 @@ class _ApplicationsContent extends StatelessWidget {
   }
 }
 
-class _AdminSidebar extends StatelessWidget {
+class _AdminSidebar extends StatefulWidget {
   const _AdminSidebar({
     required this.name,
     required this.email,
@@ -742,6 +762,7 @@ class _AdminSidebar extends StatelessWidget {
     required this.sections,
     required this.collapsed,
     required this.unreadCount,
+    required this.pendingWithdrawalCount,
     required this.onSelectSection,
     required this.onToggle,
     required this.onSignOut,
@@ -753,16 +774,39 @@ class _AdminSidebar extends StatelessWidget {
   final List<AdminSection> sections;
   final bool collapsed;
   final int unreadCount;
+  final int pendingWithdrawalCount;
   final ValueChanged<AdminSection> onSelectSection;
   final VoidCallback onToggle;
   final VoidCallback onSignOut;
+
+  @override
+  State<_AdminSidebar> createState() => _AdminSidebarState();
+}
+
+class _AdminSidebarState extends State<_AdminSidebar> {
+  final expandedGroups = <String>{
+    'Lending',
+    'Cash Operations',
+    'Administration',
+  };
+
+  String get name => widget.name;
+  String get email => widget.email;
+  AdminSection get selectedSection => widget.selectedSection;
+  List<AdminSection> get sections => widget.sections;
+  bool get collapsed => widget.collapsed;
+  int get unreadCount => widget.unreadCount;
+  int get pendingWithdrawalCount => widget.pendingWithdrawalCount;
+  ValueChanged<AdminSection> get onSelectSection => widget.onSelectSection;
+  VoidCallback get onToggle => widget.onToggle;
+  VoidCallback get onSignOut => widget.onSignOut;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
-      width: collapsed ? 84 : 272,
+      width: collapsed ? 88 : 288,
       color: const Color(0xFF101828),
       padding: EdgeInsets.fromLTRB(
         collapsed ? 12 : 20,
@@ -773,29 +817,38 @@ class _AdminSidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              BrandLogo(
-                width: collapsed ? 42 : 142,
-                height: 42,
-                padding: EdgeInsets.symmetric(
-                  horizontal: collapsed ? 4 : 10,
-                  vertical: 7,
+          if (collapsed)
+            Column(
+              children: [
+                const BrandLogo(
+                  width: 48,
+                  height: 44,
+                  padding: EdgeInsets.symmetric(horizontal: 5, vertical: 8),
                 ),
-              ),
-              if (!collapsed) const Spacer(),
-              IconButton(
-                tooltip: collapsed ? 'Expand sidebar' : 'Collapse sidebar',
-                onPressed: onToggle,
-                color: const Color(0xFFD0D5DD),
-                icon: Icon(
-                  collapsed
-                      ? Icons.keyboard_double_arrow_right_rounded
-                      : Icons.keyboard_double_arrow_left_rounded,
+                const SizedBox(height: 8),
+                IconButton.filledTonal(
+                  tooltip: 'Expand sidebar',
+                  onPressed: onToggle,
+                  icon: const Icon(Icons.keyboard_double_arrow_right_rounded),
                 ),
-              ),
-            ],
-          ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                const BrandLogo(
+                  width: 142,
+                  height: 44,
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                ),
+                const Spacer(),
+                IconButton.filledTonal(
+                  tooltip: 'Collapse sidebar',
+                  onPressed: onToggle,
+                  icon: const Icon(Icons.keyboard_double_arrow_left_rounded),
+                ),
+              ],
+            ),
           const SizedBox(height: 28),
           Expanded(
             child: ListView(
@@ -810,14 +863,15 @@ class _AdminSidebar extends StatelessWidget {
                   onSelect: onSelectSection,
                 ),
                 _SidebarGroup(
-                  label: 'Loan Management',
+                  label: 'Lending',
+                  parentIcon: Icons.account_balance_outlined,
+                  expanded: expandedGroups.contains('Lending'),
+                  onToggle: () => _toggleGroup('Lending'),
                   candidates: const [
                     AdminSection.applications,
                     AdminSection.packages,
                     AdminSection.customers,
                     AdminSection.repayments,
-                    AdminSection.transactions,
-                    AdminSection.reports,
                   ],
                   available: sections,
                   selected: selectedSection,
@@ -825,7 +879,34 @@ class _AdminSidebar extends StatelessWidget {
                   onSelect: onSelectSection,
                 ),
                 _SidebarGroup(
+                  label: 'Cash Operations',
+                  parentIcon: Icons.payments_outlined,
+                  expanded: expandedGroups.contains('Cash Operations'),
+                  onToggle: () => _toggleGroup('Cash Operations'),
+                  candidates: const [
+                    AdminSection.transactions,
+                    AdminSection.deposits,
+                    AdminSection.withdrawals,
+                  ],
+                  available: sections,
+                  selected: selectedSection,
+                  collapsed: collapsed,
+                  pendingWithdrawalCount: pendingWithdrawalCount,
+                  onSelect: onSelectSection,
+                ),
+                _SidebarGroup(
+                  label: 'Insights',
+                  candidates: const [AdminSection.reports],
+                  available: sections,
+                  selected: selectedSection,
+                  collapsed: collapsed,
+                  onSelect: onSelectSection,
+                ),
+                _SidebarGroup(
                   label: 'Administration',
+                  parentIcon: Icons.settings_suggest_outlined,
+                  expanded: expandedGroups.contains('Administration'),
+                  onToggle: () => _toggleGroup('Administration'),
                   candidates: const [AdminSection.branches, AdminSection.users],
                   available: sections,
                   selected: selectedSection,
@@ -896,6 +977,14 @@ class _AdminSidebar extends StatelessWidget {
       ),
     );
   }
+
+  void _toggleGroup(String group) {
+    setState(() {
+      if (!expandedGroups.add(group)) {
+        expandedGroups.remove(group);
+      }
+    });
+  }
 }
 
 class _SidebarGroup extends StatelessWidget {
@@ -906,6 +995,10 @@ class _SidebarGroup extends StatelessWidget {
     required this.selected,
     required this.collapsed,
     required this.onSelect,
+    this.parentIcon,
+    this.expanded = true,
+    this.onToggle,
+    this.pendingWithdrawalCount = 0,
   });
 
   final String label;
@@ -914,6 +1007,10 @@ class _SidebarGroup extends StatelessWidget {
   final AdminSection selected;
   final bool collapsed;
   final ValueChanged<AdminSection> onSelect;
+  final IconData? parentIcon;
+  final bool expanded;
+  final VoidCallback? onToggle;
+  final int pendingWithdrawalCount;
 
   @override
   Widget build(BuildContext context) {
@@ -924,7 +1021,7 @@ class _SidebarGroup extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!collapsed)
+          if (!collapsed && parentIcon == null)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 7),
               child: Text(
@@ -936,45 +1033,83 @@ class _SidebarGroup extends StatelessWidget {
                   letterSpacing: 1,
                 ),
               ),
-            ),
-          for (final section in visible)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Tooltip(
-                message: collapsed ? adminSectionLabel(section) : '',
-                child: Material(
-                  color: selected == section
-                      ? const Color(0xFF344054)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                  child: ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: collapsed ? 16 : 12,
-                    ),
-                    minLeadingWidth: 24,
-                    leading: Icon(
-                      adminSectionIcon(section),
-                      color: selected == section
-                          ? const Color(0xFF00CED1)
-                          : const Color(0xFFD0D5DD),
-                    ),
-                    title: collapsed
-                        ? null
-                        : Text(
-                            adminSectionLabel(section),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: selected == section
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
-                          ),
-                    onTap: () => onSelect(section),
+            )
+          else if (!collapsed)
+            Material(
+              color: visible.contains(selected)
+                  ? const Color(0xFF1D2939)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+              child: ListTile(
+                dense: true,
+                onTap: onToggle,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                leading: Icon(parentIcon, color: const Color(0xFF98A2B3)),
+                title: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Color(0xFFE4E7EC),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                trailing: AnimatedRotation(
+                  turns: expanded ? .5 : 0,
+                  duration: const Duration(milliseconds: 180),
+                  child: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Color(0xFF98A2B3),
                   ),
                 ),
               ),
             ),
+          if (collapsed || expanded)
+            for (final section in visible)
+              Padding(
+                padding: EdgeInsets.only(
+                  left: !collapsed && parentIcon != null ? 14 : 0,
+                  top: 4,
+                ),
+                child: Tooltip(
+                  message: collapsed ? adminSectionLabel(section) : '',
+                  child: Material(
+                    color: selected == section
+                        ? const Color(0xFF344054)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    child: ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: collapsed ? 16 : 12,
+                      ),
+                      minLeadingWidth: 24,
+                      leading: Badge(
+                        isLabelVisible:
+                            section == AdminSection.withdrawals &&
+                            pendingWithdrawalCount > 0,
+                        label: Text('$pendingWithdrawalCount'),
+                        child: Icon(
+                          adminSectionIcon(section),
+                          color: selected == section
+                              ? const Color(0xFF00CED1)
+                              : const Color(0xFFD0D5DD),
+                        ),
+                      ),
+                      title: collapsed
+                          ? null
+                          : Text(
+                              adminSectionLabel(section),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: selected == section
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                              ),
+                            ),
+                      onTap: () => onSelect(section),
+                    ),
+                  ),
+                ),
+              ),
         ],
       ),
     );

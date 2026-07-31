@@ -21,6 +21,7 @@ class RegisterController extends GetxController {
   final hideConfirmPassword = true.obs;
   final isLoading = false.obs;
   final formIsValid = false.obs;
+  final stepIsValid = false.obs;
   final errorMessage = ''.obs;
   final AuthApi _authApi;
 
@@ -41,7 +42,7 @@ class RegisterController extends GetxController {
   }
 
   bool get isValid => formIsValid.value;
-  bool get canContinue => isStepValid(currentStep.value);
+  bool get canContinue => stepIsValid.value;
   bool get passwordMatches =>
       passwordController.text == confirmPasswordController.text;
 
@@ -67,6 +68,7 @@ class RegisterController extends GetxController {
   }
 
   void _validateForm() {
+    stepIsValid.value = isStepValid(currentStep.value);
     formIsValid.value = List.generate(3, isStepValid).every((valid) => valid);
   }
 
@@ -88,12 +90,14 @@ class RegisterController extends GetxController {
   void nextStep() {
     if (canContinue && currentStep.value < 2) {
       currentStep.value++;
+      _validateForm();
     }
   }
 
   void previousStep() {
     if (currentStep.value > 0 && !isLoading.value) {
       currentStep.value--;
+      _validateForm();
     }
   }
 

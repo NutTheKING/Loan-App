@@ -17,6 +17,8 @@ enum AdminSection {
   customers,
   repayments,
   transactions,
+  deposits,
+  withdrawals,
   reports,
   branches,
   users,
@@ -33,6 +35,7 @@ class AdminDashboardController extends GetxController {
   final isSubmitting = false.obs;
   final errorMessage = ''.obs;
   final statusFilter = 'ALL'.obs;
+  final transactionStatusFilter = 'ALL'.obs;
   final selectedSection = AdminSection.dashboard.obs;
   final sidebarCollapsed = false.obs;
   final Rxn<AuthUser> currentUser = Rxn<AuthUser>();
@@ -61,6 +64,23 @@ class AdminDashboardController extends GetxController {
       return loans;
     }
     return loans.where((loan) => loan.status == statusFilter.value).toList();
+  }
+
+  List<AdminTransaction> get filteredTransactions {
+    if (transactionStatusFilter.value == 'ALL') {
+      return transactions;
+    }
+    return transactions
+        .where((item) => item.status == transactionStatusFilter.value)
+        .toList();
+  }
+
+  int transactionCountFor(String status) =>
+      transactions.where((item) => item.status == status).length;
+
+  int get pendingWithdrawalCount {
+    final value = overview['pendingWithdrawals'];
+    return value is num ? value.toInt() : int.tryParse('$value') ?? 0;
   }
 
   int countFor(String status) =>
@@ -100,6 +120,9 @@ class AdminDashboardController extends GetxController {
     if (!availableSections.contains(section)) {
       return;
     }
+    if (selectedSection.value != section) {
+      transactionStatusFilter.value = 'ALL';
+    }
     selectedSection.value = section;
     await switch (section) {
       AdminSection.dashboard => loadOverview(),
@@ -108,6 +131,8 @@ class AdminDashboardController extends GetxController {
       AdminSection.customers => loadCustomers(),
       AdminSection.repayments => loadRepayments(),
       AdminSection.transactions => loadTransactions(),
+      AdminSection.deposits => loadTransactions(type: 'DEPOSIT'),
+      AdminSection.withdrawals => loadTransactions(type: 'WITHDRAWAL'),
       AdminSection.reports => loadReport(),
       AdminSection.branches => loadBranches(),
       AdminSection.users => loadUsers(),
@@ -129,9 +154,9 @@ class AdminDashboardController extends GetxController {
     repayments.assignAll(await _adminApi.repayments());
   });
 
-  Future<void> loadTransactions() => _load(() async {
+  Future<void> loadTransactions({String? type}) => _load(() async {
     final values = await Future.wait<Object>([
-      _adminApi.transactions(),
+      _adminApi.transactions(type: type),
       if (can('customers.read')) _adminApi.customers(),
     ]);
     transactions.assignAll(values.first as List<AdminTransaction>);
@@ -139,6 +164,10 @@ class AdminDashboardController extends GetxController {
       customers.assignAll(values[1] as List<AdminCustomer>);
     }
   });
+
+  void setTransactionStatusFilter(String status) {
+    transactionStatusFilter.value = status;
+  }
 
   Future<void> loadReport() => _load(() async {
     report.assignAll(await _adminApi.report());
@@ -236,7 +265,7 @@ class AdminDashboardController extends GetxController {
       amount: amount,
       description: description,
     ),
-    loadTransactions,
+    _refreshCashData,
     successMessage: 'Customer deposit completed.',
   );
 
@@ -250,7 +279,7 @@ class AdminDashboardController extends GetxController {
       status: status,
       reason: reason,
     ),
-    loadTransactions,
+    _refreshCashData,
     successMessage: status == 'COMPLETED'
         ? 'Transaction approved and completed.'
         : 'Transaction rejected and customer notified.',
@@ -258,9 +287,30 @@ class AdminDashboardController extends GetxController {
 
   Future<bool> deleteTransaction(AdminTransaction transaction) => _save(
     () => _adminApi.deleteTransaction(transaction.id),
-    loadTransactions,
+    _refreshCashData,
     successMessage: 'Transaction request deleted.',
   );
+
+  Future<AdminTransaction?> loadTransactionDetail(String transactionId) async {
+    try {
+      return await _adminApi.transactionDetail(transactionId);
+    } on ApiException catch (error) {
+      _showError('Unable to load request', error.message);
+      return null;
+    }
+  }
+
+  Future<void> _refreshCashData() async {
+    await refreshCurrentSection();
+    if (selectedSection.value != AdminSection.dashboard &&
+        can('dashboard.view')) {
+      try {
+        overview.assignAll(await _adminApi.overview());
+      } on ApiException {
+        return;
+      }
+    }
+  }
 
   Future<bool> deleteCustomer(AdminCustomer customer) => _save(
     () => _adminApi.deleteCustomer(customer.id),
@@ -420,6 +470,8 @@ class AdminDashboardController extends GetxController {
     AdminSection.customers => 'customers.read',
     AdminSection.repayments => 'repayments.read',
     AdminSection.transactions => 'transactions.read',
+    AdminSection.deposits => 'transactions.read',
+    AdminSection.withdrawals => 'transactions.read',
     AdminSection.reports => 'reports.read',
     AdminSection.branches => 'branches.read',
     AdminSection.users => 'users.manage',

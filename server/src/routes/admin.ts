@@ -104,7 +104,7 @@ const transactionReviewSchema = z
       TransactionStatus.COMPLETED,
       TransactionStatus.REJECTED,
     ]),
-    reason: z.string().trim().max(1000).optional(),
+    reason: z.string().trim().min(5, 'Provide a clear rejection reason.').max(1000).optional(),
   })
   .superRefine((value, context) => {
     if (
@@ -185,7 +185,18 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     onRequest: [requirePermission(Permissions.dashboardView)],
     schema: { tags: ['Admin'], summary: 'Get the management dashboard overview' },
   }, async () => {
-    const [customers, applications, pending, approved, rejected, approvedAmount, repayments, recentTransactions] =
+    const [
+      customers,
+      applications,
+      pending,
+      approved,
+      rejected,
+      approvedAmount,
+      repayments,
+      pendingDeposits,
+      pendingWithdrawals,
+      recentTransactions,
+    ] =
       await Promise.all([
         prisma.user.count({ where: { role: UserRole.CUSTOMER, isActive: true } }),
         prisma.loan.count({ where: { submittedAt: { not: null } } }),
@@ -197,6 +208,12 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
           _sum: { principal: true },
         }),
         prisma.repayment.groupBy({ by: ['status'], _count: { _all: true }, _sum: { amountDue: true, amountPaid: true } }),
+        prisma.transaction.count({
+          where: { type: TransactionType.DEPOSIT, status: TransactionStatus.PENDING },
+        }),
+        prisma.transaction.count({
+          where: { type: TransactionType.WITHDRAWAL, status: TransactionStatus.PENDING },
+        }),
         prisma.transaction.findMany({
           include: { user: { select: { fullName: true, email: true } }, loan: { select: { loanNumber: true } } },
           orderBy: { occurredAt: 'desc' },
@@ -211,6 +228,8 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
       approved,
       rejected,
       approvedPrincipal: moneyToNumber(approvedAmount._sum.principal ?? 0),
+      pendingDeposits,
+      pendingWithdrawals,
       repayments: repayments.map((item) => ({
         status: item.status,
         count: item._count._all,

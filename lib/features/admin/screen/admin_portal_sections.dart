@@ -6,6 +6,8 @@ import 'package:loan_app/features/admin/model/admin_loan.dart';
 
 enum AdminRecordType { repayments }
 
+enum AdminTransactionView { all, deposits, withdrawals }
+
 String adminSectionLabel(AdminSection section) => switch (section) {
   AdminSection.dashboard => 'Dashboard',
   AdminSection.applications => 'Loan Applications',
@@ -13,6 +15,8 @@ String adminSectionLabel(AdminSection section) => switch (section) {
   AdminSection.customers => 'Customers',
   AdminSection.repayments => 'EMI & Repayments',
   AdminSection.transactions => 'Transactions',
+  AdminSection.deposits => 'Deposits',
+  AdminSection.withdrawals => 'Withdrawal Requests',
   AdminSection.reports => 'Reports',
   AdminSection.branches => 'Branches',
   AdminSection.users => 'Users & Permissions',
@@ -20,16 +24,18 @@ String adminSectionLabel(AdminSection section) => switch (section) {
 };
 
 IconData adminSectionIcon(AdminSection section) => switch (section) {
-  AdminSection.dashboard => Icons.dashboard_outlined,
-  AdminSection.applications => Icons.description_outlined,
-  AdminSection.packages => Icons.inventory_2_outlined,
-  AdminSection.customers => Icons.people_outline_rounded,
-  AdminSection.repayments => Icons.calculate_outlined,
-  AdminSection.transactions => Icons.receipt_long_outlined,
-  AdminSection.reports => Icons.bar_chart_rounded,
-  AdminSection.branches => Icons.account_balance_outlined,
-  AdminSection.users => Icons.admin_panel_settings_outlined,
-  AdminSection.profile => Icons.person_outline_rounded,
+  AdminSection.dashboard => Icons.dashboard_customize_outlined,
+  AdminSection.applications => Icons.assignment_outlined,
+  AdminSection.packages => Icons.account_balance_wallet_outlined,
+  AdminSection.customers => Icons.group_outlined,
+  AdminSection.repayments => Icons.calendar_month_outlined,
+  AdminSection.transactions => Icons.swap_vert_circle_outlined,
+  AdminSection.deposits => Icons.add_card_outlined,
+  AdminSection.withdrawals => Icons.payments_outlined,
+  AdminSection.reports => Icons.analytics_outlined,
+  AdminSection.branches => Icons.apartment_outlined,
+  AdminSection.users => Icons.manage_accounts_outlined,
+  AdminSection.profile => Icons.account_circle_outlined,
 };
 
 class AdminOverviewSection extends StatelessWidget {
@@ -86,6 +92,18 @@ class AdminOverviewSection extends StatelessWidget {
                 value: currency.format(_number(data['approvedPrincipal'])),
                 icon: Icons.account_balance_wallet_outlined,
                 color: const Color(0xFF12B76A),
+              ),
+              _MetricCard(
+                title: 'Pending withdrawals',
+                value: '${data['pendingWithdrawals'] ?? 0}',
+                icon: Icons.payments_outlined,
+                color: const Color(0xFFF04438),
+              ),
+              _MetricCard(
+                title: 'Pending deposits',
+                value: '${data['pendingDeposits'] ?? 0}',
+                icon: Icons.add_card_outlined,
+                color: const Color(0xFF06AED4),
               ),
             ],
           ),
@@ -327,25 +345,42 @@ class AdminTransactionsSection extends StatelessWidget {
     required this.currency,
     required this.dateTime,
     required this.desktop,
+    this.view = AdminTransactionView.all,
   });
 
   final AdminDashboardController controller;
   final NumberFormat currency;
   final DateFormat dateTime;
   final bool desktop;
+  final AdminTransactionView view;
 
   @override
   Widget build(BuildContext context) {
-    return Obx(
-      () => _SectionList(
+    return Obx(() {
+      final records = controller.filteredTransactions;
+      final title = switch (view) {
+        AdminTransactionView.all => 'Transactions & Cash Review',
+        AdminTransactionView.deposits => 'Customer Deposits',
+        AdminTransactionView.withdrawals => 'Withdrawal Requests',
+      };
+      final subtitle = switch (view) {
+        AdminTransactionView.all =>
+          'Review customer cash requests and inspect completed account activity.',
+        AdminTransactionView.deposits =>
+          'Post back-office deposits and review customer deposit requests.',
+        AdminTransactionView.withdrawals =>
+          'Approve or reject customer cash-out requests. Every rejection requires a clear reason.',
+      };
+      return _SectionList(
         desktop: desktop,
-        onRefresh: controller.loadTransactions,
-        title: 'Transactions & Cash Review',
-        subtitle:
-            'Post deposits and review pending customer deposit or withdrawal requests.',
+        onRefresh: controller.refreshCurrentSection,
+        title: title,
+        subtitle: subtitle,
         loading: controller.isLoading.value,
         error: controller.errorMessage.value,
-        action: controller.can('transactions.manage')
+        action:
+            controller.can('transactions.manage') &&
+                view != AdminTransactionView.withdrawals
             ? FilledButton.icon(
                 onPressed: () => _createDeposit(context),
                 icon: const Icon(Icons.add_card_rounded),
@@ -353,14 +388,25 @@ class AdminTransactionsSection extends StatelessWidget {
               )
             : null,
         children: [
+          if (view == AdminTransactionView.withdrawals)
+            _WithdrawalSummary(
+              transactions: controller.transactions,
+              currency: currency,
+            ),
+          _TransactionFilters(controller: controller),
           _Panel(
-            title: 'Transactions (${controller.transactions.length})',
-            subtitle:
-                'Completed records are immutable; pending or rejected customer requests can be safely removed.',
-            child: controller.transactions.isEmpty
-                ? const _EmptyState(message: 'No transactions were found.')
+            title: '$title (${records.length})',
+            subtitle: view == AdminTransactionView.withdrawals
+                ? 'Pending requests require review. Completed withdrawals are permanent financial records.'
+                : 'Completed records are immutable; pending or rejected customer requests can be safely removed.',
+            child: records.isEmpty
+                ? _EmptyState(
+                    message: view == AdminTransactionView.withdrawals
+                        ? 'No withdrawal requests match this status.'
+                        : 'No transactions match this status.',
+                  )
                 : Column(
-                    children: controller.transactions
+                    children: records
                         .map(
                           (transaction) => Card(
                             margin: const EdgeInsets.only(bottom: 10),
@@ -400,8 +446,8 @@ class AdminTransactionsSection extends StatelessWidget {
                   ),
           ),
         ],
-      ),
-    );
+      );
+    });
   }
 
   Future<void> _createDeposit(BuildContext context) async {
@@ -440,8 +486,11 @@ class AdminTransactionsSection extends StatelessWidget {
 
   Future<void> _openTransaction(
     BuildContext context,
-    AdminTransaction transaction,
+    AdminTransaction summary,
   ) async {
+    final transaction =
+        await controller.loadTransactionDetail(summary.id) ?? summary;
+    if (!context.mounted) return;
     final noteController = TextEditingController(
       text: transaction.reviewReason,
     );
@@ -467,6 +516,16 @@ class AdminTransactionsSection extends StatelessWidget {
                     value: transaction.customerName,
                   ),
                   _DetailLine(label: 'Email', value: transaction.customerEmail),
+                  if ((transaction.customerPhone ?? '').isNotEmpty)
+                    _DetailLine(
+                      label: 'Phone',
+                      value: transaction.customerPhone!,
+                    ),
+                  if ((transaction.customerIdNumber ?? '').isNotEmpty)
+                    _DetailLine(
+                      label: 'ID number',
+                      value: transaction.customerIdNumber!,
+                    ),
                   _DetailLine(
                     label: 'Description',
                     value: transaction.description,
@@ -499,8 +558,11 @@ class AdminTransactionsSection extends StatelessWidget {
                       minLines: 2,
                       maxLines: 4,
                       decoration: InputDecoration(
-                        labelText: 'Review note',
-                        hintText: 'Required when rejecting a request',
+                        labelText: transaction.type == 'WITHDRAWAL'
+                            ? 'Rejection reason'
+                            : 'Review note',
+                        hintText:
+                            'Required for rejection, for example: payout account could not be verified',
                         errorText: reasonError,
                       ),
                     ),
@@ -527,9 +589,10 @@ class AdminTransactionsSection extends StatelessWidget {
                 controller.can('transactions.manage')) ...[
               OutlinedButton.icon(
                 onPressed: () {
-                  if (noteController.text.trim().isEmpty) {
+                  if (noteController.text.trim().length < 5) {
                     setDialogState(() {
-                      reasonError = 'Enter the rejection reason.';
+                      reasonError =
+                          'Enter a clear rejection reason of at least 5 characters.';
                     });
                     return;
                   }
@@ -542,7 +605,11 @@ class AdminTransactionsSection extends StatelessWidget {
                   );
                 },
                 icon: const Icon(Icons.close_rounded),
-                label: const Text('Reject'),
+                label: Text(
+                  transaction.type == 'WITHDRAWAL'
+                      ? 'Reject withdrawal'
+                      : 'Reject',
+                ),
               ),
               FilledButton.icon(
                 onPressed: () => Navigator.pop(
@@ -553,7 +620,11 @@ class AdminTransactionsSection extends StatelessWidget {
                   ),
                 ),
                 icon: const Icon(Icons.check_rounded),
-                label: const Text('Approve'),
+                label: Text(
+                  transaction.type == 'WITHDRAWAL'
+                      ? 'Approve withdrawal'
+                      : 'Approve',
+                ),
               ),
             ],
           ],
@@ -582,8 +653,10 @@ class AdminTransactionsSection extends StatelessWidget {
           ? 'Approve transaction?'
           : 'Reject transaction?',
       message: action.status == 'COMPLETED'
-          ? 'The request will be completed and the customer balance will update.'
-          : 'The customer will receive the rejection reason.',
+          ? transaction.type == 'WITHDRAWAL'
+                ? '${currency.format(transaction.amount)} will be deducted from the customer balance and marked completed.'
+                : 'The request will be completed and the customer balance will update.'
+          : 'The customer will receive this reason: ${action.reason}',
       confirmLabel: action.status == 'COMPLETED' ? 'Approve' : 'Reject',
     );
     if (confirmed) {
@@ -594,6 +667,161 @@ class AdminTransactionsSection extends StatelessWidget {
       );
     }
   }
+}
+
+class _TransactionFilters extends StatelessWidget {
+  const _TransactionFilters({required this.controller});
+
+  final AdminDashboardController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    const statuses = ['ALL', 'PENDING', 'COMPLETED', 'REJECTED'];
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: statuses.map((status) {
+        final count = status == 'ALL'
+            ? controller.transactions.length
+            : controller.transactionCountFor(status);
+        return ChoiceChip(
+          selected: controller.transactionStatusFilter.value == status,
+          onSelected: (_) => controller.setTransactionStatusFilter(status),
+          avatar: Icon(switch (status) {
+            'PENDING' => Icons.schedule_rounded,
+            'COMPLETED' => Icons.check_circle_outline_rounded,
+            'REJECTED' => Icons.cancel_outlined,
+            _ => Icons.list_alt_rounded,
+          }, size: 17),
+          label: Text('${_friendly(status)}  $count'),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _WithdrawalSummary extends StatelessWidget {
+  const _WithdrawalSummary({
+    required this.transactions,
+    required this.currency,
+  });
+
+  final List<AdminTransaction> transactions;
+  final NumberFormat currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final pending = transactions
+        .where((item) => item.status == 'PENDING')
+        .toList();
+    final completed = transactions
+        .where((item) => item.status == 'COMPLETED')
+        .toList();
+    final rejected = transactions
+        .where((item) => item.status == 'REJECTED')
+        .toList();
+    final pendingAmount = pending.fold<double>(
+      0,
+      (total, item) => total + item.amount,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = constraints.maxWidth >= 780
+            ? (constraints.maxWidth - 24) / 3
+            : constraints.maxWidth;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _WithdrawalMetric(
+              width: cardWidth,
+              icon: Icons.pending_actions_rounded,
+              label: 'Pending review',
+              value: '${pending.length}',
+              detail: currency.format(pendingAmount),
+              color: const Color(0xFFF79009),
+            ),
+            _WithdrawalMetric(
+              width: cardWidth,
+              icon: Icons.task_alt_rounded,
+              label: 'Completed',
+              value: '${completed.length}',
+              detail: 'Approved cash-outs',
+              color: const Color(0xFF12B76A),
+            ),
+            _WithdrawalMetric(
+              width: cardWidth,
+              icon: Icons.do_not_disturb_alt_rounded,
+              label: 'Rejected',
+              value: '${rejected.length}',
+              detail: 'Reason sent to customer',
+              color: const Color(0xFFF04438),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _WithdrawalMetric extends StatelessWidget {
+  const _WithdrawalMetric({
+    required this.width,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.detail,
+    required this.color,
+  });
+
+  final double width;
+  final IconData icon;
+  final String label;
+  final String value;
+  final String detail;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: width,
+    child: Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: color.withValues(alpha: .14),
+              foregroundColor: color,
+              child: Icon(icon),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: Theme.of(context).textTheme.labelLarge),
+                  const SizedBox(height: 3),
+                  Text(
+                    value,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  Text(
+                    detail,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _TransactionAvatar extends StatelessWidget {
