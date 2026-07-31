@@ -45,6 +45,7 @@ enum TransactionType {
 enum TransactionStatus {
   PENDING
   COMPLETED
+  REJECTED
   FAILED
 }
 
@@ -54,6 +55,11 @@ model User {
   passwordHash   String
   fullName       String
   idNumber       String?        @unique
+  phone          String?        @db.VarChar(30)
+  dateOfBirth    DateTime?       @db.Date
+  gender         String?        @db.VarChar(40)
+  address        String?
+  profilePhotoUrl String?
   role           UserRole       @default(CUSTOMER)
   isActive       Boolean        @default(true)
   lastLoginAt    DateTime?
@@ -62,7 +68,8 @@ model User {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   loans          Loan[]
-  transactions   Transaction[]
+  transactions   Transaction[]  @relation("AccountTransactions")
+  reviewedTransactions Transaction[] @relation("TransactionReviewer")
   refreshTokens  RefreshToken[]
   notifications  Notification[]
   auditEvents    AuditLog[]     @relation("AuditActor")
@@ -108,6 +115,7 @@ model Loan {
   reviewedAt           DateTime?
   disbursedAt          DateTime?
   submittedAt          DateTime?
+  informationRequestedAt DateTime?
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
   borrowerId           String       @db.Uuid
@@ -128,6 +136,7 @@ model LoanDocument {
   id          String       @id @default(uuid()) @db.Uuid
   kind        DocumentKind
   storageKey  String       @unique
+  url         String       @unique
   fileName    String
   mimeType    String
   sizeBytes   Int
@@ -156,21 +165,27 @@ model Repayment {
 }
 
 model Transaction {
-  id          String            @id @default(uuid()) @db.Uuid
-  type        TransactionType
-  status      TransactionStatus @default(PENDING)
-  amount      Decimal           @db.Decimal(14, 2)
-  currency    String            @default("PHP") @db.VarChar(3)
-  description String
-  occurredAt  DateTime          @default(now())
-  createdAt   DateTime          @default(now())
-  userId      String            @db.Uuid
-  loanId      String?           @db.Uuid
-  loan        Loan?             @relation(fields: [loanId], references: [id], onDelete: SetNull)
-  user        User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  id           String            @id @default(uuid()) @db.Uuid
+  type         TransactionType
+  status       TransactionStatus @default(PENDING)
+  amount       Decimal           @db.Decimal(14, 2)
+  currency     String            @default("PHP") @db.VarChar(3)
+  description  String
+  reviewReason String?
+  reviewedAt   DateTime?
+  occurredAt   DateTime          @default(now())
+  createdAt    DateTime          @default(now())
+  userId       String            @db.Uuid
+  loanId       String?           @db.Uuid
+  reviewedById String?           @db.Uuid
+  loan         Loan?             @relation(fields: [loanId], references: [id], onDelete: SetNull)
+  user         User              @relation("AccountTransactions", fields: [userId], references: [id], onDelete: Restrict)
+  reviewedBy   User?             @relation("TransactionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([userId, occurredAt])
   @@index([loanId, occurredAt])
+  @@index([status, type, occurredAt])
+  @@index([reviewedById, reviewedAt])
 }
 
 model Notification {

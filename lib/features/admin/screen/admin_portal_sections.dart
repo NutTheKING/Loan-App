@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:loan_app/features/admin/controller/admin_dashboard_controller.dart';
 import 'package:loan_app/features/admin/model/admin_loan.dart';
 
-enum AdminRecordType { repayments, transactions }
+enum AdminRecordType { repayments }
 
 String adminSectionLabel(AdminSection section) => switch (section) {
   AdminSection.dashboard => 'Dashboard',
@@ -195,6 +195,9 @@ class AdminPackagesSection extends StatelessWidget {
                       onEdit: controller.can('products.manage')
                           ? () => _editProduct(context, product)
                           : null,
+                      onDelete: controller.can('products.manage')
+                          ? () => _deleteProduct(context, product)
+                          : null,
                     ),
                   )
                   .toList(),
@@ -212,8 +215,33 @@ class AdminPackagesSection extends StatelessWidget {
       context: context,
       builder: (_) => _ProductDialog(product: product),
     );
-    if (result != null) {
+    if (result != null &&
+        context.mounted &&
+        await _confirmAction(
+          context,
+          title: product == null
+              ? 'Create loan package?'
+              : 'Save package changes?',
+          message:
+              'The package rules will be available to the customer loan API.',
+          confirmLabel: product == null ? 'Create package' : 'Save changes',
+        )) {
       await controller.saveProduct(result);
+    }
+  }
+
+  Future<void> _deleteProduct(
+    BuildContext context,
+    AdminLoanProduct product,
+  ) async {
+    final confirmed = await _confirmDelete(
+      context,
+      title: 'Delete ${product.name}?',
+      message:
+          'A package can only be deleted when no loan application has used it. Otherwise disable it.',
+    );
+    if (confirmed) {
+      await controller.deleteProduct(product);
     }
   }
 }
@@ -237,10 +265,7 @@ class AdminRecordsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final records = switch (type) {
-        AdminRecordType.repayments => controller.repayments,
-        AdminRecordType.transactions => controller.transactions,
-      };
+      final records = controller.repayments;
       return _SectionList(
         desktop: desktop,
         onRefresh: _refresh,
@@ -261,74 +286,464 @@ class AdminRecordsSection extends StatelessWidget {
     });
   }
 
-  String get _title => switch (type) {
-    AdminRecordType.repayments => 'EMI & Repayments',
-    AdminRecordType.transactions => 'Transactions',
-  };
+  String get _title => 'EMI & Repayments';
 
-  String get _subtitle => switch (type) {
-    AdminRecordType.repayments =>
-      'Installment schedules, amounts paid, due dates, and status.',
-    AdminRecordType.transactions =>
-      'Disbursements, repayments, deposits, withdrawals, and fees.',
-  };
+  String get _subtitle =>
+      'Installment schedules, amounts paid, due dates, and status.';
 
-  Future<void> Function() get _refresh => switch (type) {
-    AdminRecordType.repayments => controller.loadRepayments,
-    AdminRecordType.transactions => controller.loadTransactions,
-  };
+  Future<void> Function() get _refresh => controller.loadRepayments;
 
-  List<String> get _columns => switch (type) {
-    AdminRecordType.repayments => const [
-      'Loan',
-      'Customer',
-      'Installment',
-      'Due date',
-      'Amount due',
-      'Paid',
-      'Status',
-    ],
-    AdminRecordType.transactions => const [
-      'Customer',
-      'Loan',
-      'Type',
-      'Amount',
-      'Status',
-      'Date',
-    ],
-  };
+  List<String> get _columns => const [
+    'Loan',
+    'Customer',
+    'Installment',
+    'Due date',
+    'Amount due',
+    'Paid',
+    'Status',
+  ];
 
   List<List<String>> _rows(List<Map<String, dynamic>> records) {
-    return switch (type) {
-      AdminRecordType.repayments =>
-        records
-            .map(
-              (item) => [
-                _nested(item, 'loan', 'loanNumber'),
-                _nestedDeep(item, 'loan', 'borrower', 'fullName'),
-                '#${item['installment'] ?? 0}',
-                _date(item['dueDate'], dateTime, dateOnly: true),
-                currency.format(_number(item['amountDue'])),
-                currency.format(_number(item['amountPaid'])),
-                _friendly(item['status']),
-              ],
-            )
-            .toList(),
-      AdminRecordType.transactions =>
-        records
-            .map(
-              (item) => [
-                _nested(item, 'user', 'fullName'),
-                _nested(item, 'loan', 'loanNumber', fallback: '—'),
-                _friendly(item['type']),
-                currency.format(_number(item['amount'])),
-                _friendly(item['status']),
-                _date(item['occurredAt'], dateTime),
-              ],
-            )
-            .toList(),
-    };
+    return records
+        .map(
+          (item) => [
+            _nested(item, 'loan', 'loanNumber'),
+            _nestedDeep(item, 'loan', 'borrower', 'fullName'),
+            '#${item['installment'] ?? 0}',
+            _date(item['dueDate'], dateTime, dateOnly: true),
+            currency.format(_number(item['amountDue'])),
+            currency.format(_number(item['amountPaid'])),
+            _friendly(item['status']),
+          ],
+        )
+        .toList();
   }
+}
+
+class AdminTransactionsSection extends StatelessWidget {
+  const AdminTransactionsSection({
+    super.key,
+    required this.controller,
+    required this.currency,
+    required this.dateTime,
+    required this.desktop,
+  });
+
+  final AdminDashboardController controller;
+  final NumberFormat currency;
+  final DateFormat dateTime;
+  final bool desktop;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(
+      () => _SectionList(
+        desktop: desktop,
+        onRefresh: controller.loadTransactions,
+        title: 'Transactions & Cash Review',
+        subtitle:
+            'Post deposits and review pending customer deposit or withdrawal requests.',
+        loading: controller.isLoading.value,
+        error: controller.errorMessage.value,
+        action: controller.can('transactions.manage')
+            ? FilledButton.icon(
+                onPressed: () => _createDeposit(context),
+                icon: const Icon(Icons.add_card_rounded),
+                label: const Text('Add deposit'),
+              )
+            : null,
+        children: [
+          _Panel(
+            title: 'Transactions (${controller.transactions.length})',
+            subtitle:
+                'Completed records are immutable; pending or rejected customer requests can be safely removed.',
+            child: controller.transactions.isEmpty
+                ? const _EmptyState(message: 'No transactions were found.')
+                : Column(
+                    children: controller.transactions
+                        .map(
+                          (transaction) => Card(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            child: ListTile(
+                              onTap: () =>
+                                  _openTransaction(context, transaction),
+                              leading: _TransactionAvatar(
+                                transaction: transaction,
+                              ),
+                              title: Text(
+                                transaction.description,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${transaction.customerName} · ${_friendly(transaction.type)} · ${_date(transaction.occurredAt.toIso8601String(), dateTime)}',
+                              ),
+                              trailing: Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 12,
+                                children: [
+                                  Text(
+                                    currency.format(transaction.amount),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  _RecordStatusChip(status: transaction.status),
+                                  const Icon(Icons.chevron_right_rounded),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _createDeposit(BuildContext context) async {
+    if (controller.customers.isEmpty) {
+      await controller.loadCustomers();
+      if (!context.mounted || controller.customers.isEmpty) {
+        return;
+      }
+    }
+    final request = await showDialog<_DepositRequest>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _DepositDialog(customers: controller.customers),
+    );
+    if (request == null || !context.mounted) {
+      return;
+    }
+    final customer = controller.customers.firstWhereOrNull(
+      (item) => item.id == request.customerId,
+    );
+    final confirmed = await _confirmAction(
+      context,
+      title: 'Post completed deposit?',
+      message:
+          '${currency.format(request.amount)} will be added immediately to ${customer?.fullName ?? 'the customer'}’s available balance.',
+      confirmLabel: 'Post deposit',
+    );
+    if (confirmed) {
+      await controller.createDeposit(
+        customerId: request.customerId,
+        amount: request.amount,
+        description: request.description,
+      );
+    }
+  }
+
+  Future<void> _openTransaction(
+    BuildContext context,
+    AdminTransaction transaction,
+  ) async {
+    final noteController = TextEditingController(
+      text: transaction.reviewReason,
+    );
+    String? reasonError;
+    final action = await showDialog<_TransactionAction>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              Expanded(child: Text(_friendly(transaction.type))),
+              _RecordStatusChip(status: transaction.status),
+            ],
+          ),
+          content: SizedBox(
+            width: 620,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _DetailLine(
+                    label: 'Customer',
+                    value: transaction.customerName,
+                  ),
+                  _DetailLine(label: 'Email', value: transaction.customerEmail),
+                  _DetailLine(
+                    label: 'Description',
+                    value: transaction.description,
+                  ),
+                  _DetailLine(
+                    label: 'Amount',
+                    value: currency.format(transaction.amount),
+                  ),
+                  _DetailLine(
+                    label: 'Requested',
+                    value: dateTime.format(transaction.occurredAt.toLocal()),
+                  ),
+                  if (transaction.loanNumber != null)
+                    _DetailLine(label: 'Loan', value: transaction.loanNumber!),
+                  if (transaction.reviewerName != null)
+                    _DetailLine(
+                      label: 'Reviewed by',
+                      value: transaction.reviewerName!,
+                    ),
+                  if ((transaction.reviewReason ?? '').isNotEmpty)
+                    _DetailLine(
+                      label: 'Review reason',
+                      value: transaction.reviewReason!,
+                    ),
+                  if (transaction.isPending &&
+                      controller.can('transactions.manage')) ...[
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: noteController,
+                      minLines: 2,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        labelText: 'Review note',
+                        hintText: 'Required when rejecting a request',
+                        errorText: reasonError,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            if (transaction.canDelete && controller.can('transactions.manage'))
+              TextButton.icon(
+                onPressed: () => Navigator.pop(
+                  dialogContext,
+                  const _TransactionAction(status: 'DELETE'),
+                ),
+                icon: const Icon(Icons.delete_outline_rounded),
+                label: const Text('Delete'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Close'),
+            ),
+            if (transaction.isPending &&
+                controller.can('transactions.manage')) ...[
+              OutlinedButton.icon(
+                onPressed: () {
+                  if (noteController.text.trim().isEmpty) {
+                    setDialogState(() {
+                      reasonError = 'Enter the rejection reason.';
+                    });
+                    return;
+                  }
+                  Navigator.pop(
+                    dialogContext,
+                    _TransactionAction(
+                      status: 'REJECTED',
+                      reason: noteController.text.trim(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.close_rounded),
+                label: const Text('Reject'),
+              ),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(
+                  dialogContext,
+                  _TransactionAction(
+                    status: 'COMPLETED',
+                    reason: noteController.text.trim(),
+                  ),
+                ),
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('Approve'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+    noteController.dispose();
+    if (action == null || !context.mounted) {
+      return;
+    }
+    if (action.status == 'DELETE') {
+      final confirmed = await _confirmDelete(
+        context,
+        title: 'Delete this transaction request?',
+        message:
+            'Only pending or rejected requests can be deleted. Completed financial records remain immutable.',
+      );
+      if (confirmed) {
+        await controller.deleteTransaction(transaction);
+      }
+      return;
+    }
+    final confirmed = await _confirmAction(
+      context,
+      title: action.status == 'COMPLETED'
+          ? 'Approve transaction?'
+          : 'Reject transaction?',
+      message: action.status == 'COMPLETED'
+          ? 'The request will be completed and the customer balance will update.'
+          : 'The customer will receive the rejection reason.',
+      confirmLabel: action.status == 'COMPLETED' ? 'Approve' : 'Reject',
+    );
+    if (confirmed) {
+      await controller.reviewTransaction(
+        transaction: transaction,
+        status: action.status,
+        reason: action.reason,
+      );
+    }
+  }
+}
+
+class _TransactionAvatar extends StatelessWidget {
+  const _TransactionAvatar({required this.transaction});
+
+  final AdminTransaction transaction;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDeposit = transaction.type == 'DEPOSIT';
+    final color = isDeposit ? const Color(0xFF12B76A) : const Color(0xFFF04438);
+    return CircleAvatar(
+      backgroundColor: color.withValues(alpha: .14),
+      child: Icon(
+        isDeposit ? Icons.south_west_rounded : Icons.north_east_rounded,
+        color: color,
+      ),
+    );
+  }
+}
+
+class _DepositDialog extends StatefulWidget {
+  const _DepositDialog({required this.customers});
+
+  final List<AdminCustomer> customers;
+
+  @override
+  State<_DepositDialog> createState() => _DepositDialogState();
+}
+
+class _DepositDialogState extends State<_DepositDialog> {
+  final formKey = GlobalKey<FormState>();
+  final amount = TextEditingController();
+  final description = TextEditingController(text: 'Back-office cash deposit');
+  String? customerId;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Add customer deposit'),
+    content: SizedBox(
+      width: 560,
+      child: Form(
+        key: formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: customerId,
+              decoration: const InputDecoration(
+                labelText: 'Customer',
+                prefixIcon: Icon(Icons.person_outline),
+              ),
+              items: widget.customers
+                  .where((customer) => customer.isActive)
+                  .map(
+                    (customer) => DropdownMenuItem(
+                      value: customer.id,
+                      child: Text(customer.fullName),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => customerId = value),
+              validator: (value) => value == null ? 'Select a customer.' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: amount,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Deposit amount',
+                prefixText: '₱ ',
+              ),
+              validator: (value) {
+                final number = double.tryParse(
+                  (value ?? '').replaceAll(',', ''),
+                );
+                return number != null && number > 0
+                    ? null
+                    : 'Enter a valid amount.';
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: description,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                prefixIcon: Icon(Icons.notes_rounded),
+              ),
+              validator: (value) => (value ?? '').trim().length >= 2
+                  ? null
+                  : 'Enter a description.',
+            ),
+          ],
+        ),
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      FilledButton.icon(
+        onPressed: _submit,
+        icon: const Icon(Icons.add_card_rounded),
+        label: const Text('Continue'),
+      ),
+    ],
+  );
+
+  void _submit() {
+    if (!formKey.currentState!.validate() || customerId == null) {
+      return;
+    }
+    Navigator.pop(
+      context,
+      _DepositRequest(
+        customerId: customerId!,
+        amount: double.parse(amount.text.replaceAll(',', '')),
+        description: description.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    amount.dispose();
+    description.dispose();
+    super.dispose();
+  }
+}
+
+class _DepositRequest {
+  const _DepositRequest({
+    required this.customerId,
+    required this.amount,
+    required this.description,
+  });
+
+  final String customerId;
+  final double amount;
+  final String description;
+}
+
+class _TransactionAction {
+  const _TransactionAction({required this.status, this.reason});
+
+  final String status;
+  final String? reason;
 }
 
 class AdminReportsSection extends StatelessWidget {
@@ -482,6 +897,9 @@ class AdminBranchesSection extends StatelessWidget {
                       onEdit: controller.can('branches.manage')
                           ? () => _editBranch(context, branch)
                           : null,
+                      onDelete: controller.can('branches.manage')
+                          ? () => _deleteBranch(context, branch)
+                          : null,
                     ),
                   )
                   .toList(),
@@ -496,8 +914,26 @@ class AdminBranchesSection extends StatelessWidget {
       context: context,
       builder: (_) => _BranchDialog(branch: branch),
     );
-    if (result != null) {
+    if (result != null &&
+        context.mounted &&
+        await _confirmAction(
+          context,
+          title: branch == null ? 'Create branch?' : 'Save branch changes?',
+          message: 'The branch information will be updated in PostgreSQL.',
+          confirmLabel: branch == null ? 'Create branch' : 'Save changes',
+        )) {
       await controller.saveBranch(result);
+    }
+  }
+
+  Future<void> _deleteBranch(BuildContext context, AdminBranch branch) async {
+    final confirmed = await _confirmDelete(
+      context,
+      title: 'Delete ${branch.name}?',
+      message: 'This branch will be permanently removed.',
+    );
+    if (confirmed) {
+      await controller.deleteBranch(branch);
     }
   }
 }
@@ -544,8 +980,12 @@ class AdminCustomersSection extends StatelessWidget {
                         .map(
                           (customer) => _CustomerCard(
                             customer: customer,
+                            onView: () => _viewCustomer(context, customer),
                             onEdit: controller.can('customers.manage')
                                 ? () => _editCustomer(context, customer)
+                                : null,
+                            onDelete: controller.can('customers.manage')
+                                ? () => _deleteCustomer(context, customer)
                                 : null,
                           ),
                         )
@@ -566,17 +1006,123 @@ class AdminCustomersSection extends StatelessWidget {
       barrierDismissible: false,
       builder: (_) => _CustomerDialog(customer: customer),
     );
-    if (result != null) {
+    if (result != null &&
+        context.mounted &&
+        await _confirmAction(
+          context,
+          title: customer == null
+              ? 'Register customer?'
+              : 'Save customer changes?',
+          message:
+              'Identity, contact, photo, and account access will be updated through the API.',
+          confirmLabel: customer == null ? 'Register customer' : 'Save changes',
+        )) {
       await controller.saveCustomer(result);
+    }
+  }
+
+  Future<void> _viewCustomer(BuildContext context, AdminCustomer customer) {
+    final date = DateFormat('dd MMM yyyy');
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Row(
+          children: [
+            _CustomerAvatar(customer: customer, radius: 25),
+            const SizedBox(width: 12),
+            Expanded(child: Text(customer.fullName)),
+          ],
+        ),
+        content: SizedBox(
+          width: 620,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _DetailLine(label: 'Email', value: customer.email),
+                _DetailLine(
+                  label: 'Phone',
+                  value: customer.phone ?? 'Not provided',
+                ),
+                _DetailLine(
+                  label: 'ID number',
+                  value: customer.idNumber ?? 'Not provided',
+                ),
+                _DetailLine(
+                  label: 'Date of birth',
+                  value: customer.dateOfBirth == null
+                      ? 'Not provided'
+                      : date.format(customer.dateOfBirth!.toLocal()),
+                ),
+                _DetailLine(
+                  label: 'Gender',
+                  value: customer.gender ?? 'Not provided',
+                ),
+                _DetailLine(
+                  label: 'Address',
+                  value: customer.address ?? 'Not provided',
+                ),
+                _DetailLine(
+                  label: 'Account status',
+                  value: customer.isActive ? 'Enabled' : 'Disabled',
+                ),
+                _DetailLine(label: 'Presence', value: customer.presenceStatus),
+                _DetailLine(
+                  label: 'Financial activity',
+                  value:
+                      '${customer.loanCount} loans · ${customer.transactionCount} transactions',
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+          if (controller.can('customers.manage'))
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _editCustomer(context, customer);
+              },
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('Edit'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteCustomer(
+    BuildContext context,
+    AdminCustomer customer,
+  ) async {
+    final confirmed = await _confirmDelete(
+      context,
+      title: 'Delete ${customer.fullName}?',
+      message:
+          'Only customers without loan or transaction history can be deleted. Otherwise disable the account.',
+    );
+    if (confirmed) {
+      await controller.deleteCustomer(customer);
     }
   }
 }
 
 class _CustomerCard extends StatelessWidget {
-  const _CustomerCard({required this.customer, this.onEdit});
+  const _CustomerCard({
+    required this.customer,
+    required this.onView,
+    this.onEdit,
+    this.onDelete,
+  });
 
   final AdminCustomer customer;
+  final VoidCallback onView;
   final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -600,15 +1146,7 @@ class _CustomerCard extends StatelessWidget {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  CircleAvatar(
-                    backgroundColor: colors.primaryContainer,
-                    foregroundColor: colors.onPrimaryContainer,
-                    child: Text(
-                      customer.fullName.isEmpty
-                          ? '?'
-                          : customer.fullName[0].toUpperCase(),
-                    ),
-                  ),
+                  _CustomerAvatar(customer: customer),
                   Positioned(
                     right: -2,
                     bottom: -2,
@@ -667,19 +1205,69 @@ class _CustomerCard extends StatelessWidget {
                 : 'Last seen ${DateFormat('MMM d, y · h:mm a').format(customer.lastSeenAt!.toLocal())}',
             style: Theme.of(context).textTheme.bodySmall,
           ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onView,
+                  icon: const Icon(Icons.visibility_outlined),
+                  label: const Text('View'),
+                ),
+              ),
+              if (onEdit != null) ...[
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  tooltip: 'Edit customer',
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+              ],
+              if (onDelete != null) ...[
+                const SizedBox(width: 6),
+                IconButton.filledTonal(
+                  tooltip: 'Delete customer',
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline_rounded),
+                ),
+              ],
+            ],
+          ),
           if (onEdit != null) ...[
             const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('Edit customer'),
-              ),
+            Text(
+              'Use Edit to update identity, contact, photo, and account access.',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ],
       ),
+    );
+  }
+}
+
+class _CustomerAvatar extends StatelessWidget {
+  const _CustomerAvatar({required this.customer, this.radius = 20});
+
+  final AdminCustomer customer;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final photo = customer.profilePhotoUrl?.trim() ?? '';
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: colors.primaryContainer,
+      foregroundColor: colors.onPrimaryContainer,
+      backgroundImage: photo.isEmpty ? null : NetworkImage(photo),
+      child: photo.isEmpty
+          ? Text(
+              customer.fullName.isEmpty
+                  ? '?'
+                  : customer.fullName[0].toUpperCase(),
+            )
+          : null,
     );
   }
 }
@@ -698,6 +1286,11 @@ class _CustomerDialogState extends State<_CustomerDialog> {
   late final TextEditingController fullName;
   late final TextEditingController email;
   late final TextEditingController idNumber;
+  late final TextEditingController phone;
+  late final TextEditingController dateOfBirth;
+  late final TextEditingController gender;
+  late final TextEditingController address;
+  late final TextEditingController profilePhotoUrl;
   late final TextEditingController password;
   late bool active;
   bool obscurePassword = true;
@@ -711,6 +1304,15 @@ class _CustomerDialogState extends State<_CustomerDialog> {
     fullName = TextEditingController(text: customer?.fullName ?? '');
     email = TextEditingController(text: customer?.email ?? '');
     idNumber = TextEditingController(text: customer?.idNumber ?? '');
+    phone = TextEditingController(text: customer?.phone ?? '');
+    dateOfBirth = TextEditingController(
+      text: customer?.dateOfBirth?.toIso8601String().split('T').first ?? '',
+    );
+    gender = TextEditingController(text: customer?.gender ?? '');
+    address = TextEditingController(text: customer?.address ?? '');
+    profilePhotoUrl = TextEditingController(
+      text: customer?.profilePhotoUrl ?? '',
+    );
     password = TextEditingController();
     active = customer?.isActive ?? true;
   }
@@ -762,6 +1364,75 @@ class _CustomerDialogState extends State<_CustomerDialog> {
                     return text.isEmpty || text.length >= 4
                         ? null
                         : 'Use at least 4 characters.';
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: phone,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone number (optional)',
+                    prefixIcon: Icon(Icons.phone_outlined),
+                  ),
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+                    return text.isEmpty || text.length >= 7
+                        ? null
+                        : 'Use at least 7 characters.';
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: dateOfBirth,
+                  decoration: const InputDecoration(
+                    labelText: 'Date of birth (YYYY-MM-DD)',
+                    prefixIcon: Icon(Icons.cake_outlined),
+                  ),
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+                    return text.isEmpty || DateTime.tryParse(text) != null
+                        ? null
+                        : 'Use the YYYY-MM-DD format.';
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: gender,
+                  decoration: const InputDecoration(
+                    labelText: 'Gender (optional)',
+                    prefixIcon: Icon(Icons.person_search_outlined),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: address,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'Address (optional)',
+                    prefixIcon: Icon(Icons.location_on_outlined),
+                  ),
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+                    return text.isEmpty || text.length >= 5
+                        ? null
+                        : 'Use at least 5 characters.';
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: profilePhotoUrl,
+                  keyboardType: TextInputType.url,
+                  decoration: const InputDecoration(
+                    labelText: 'Profile photo URL (optional)',
+                    prefixIcon: Icon(Icons.photo_outlined),
+                  ),
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+                    return text.isEmpty ||
+                            Uri.tryParse(text)?.hasAbsolutePath == true
+                        ? null
+                        : 'Enter a complete image URL.';
                   },
                 ),
                 const SizedBox(height: 12),
@@ -834,6 +1505,15 @@ class _CustomerDialogState extends State<_CustomerDialog> {
         email: email.text.trim().toLowerCase(),
         fullName: fullName.text.trim(),
         idNumber: idNumber.text.trim().isEmpty ? null : idNumber.text.trim(),
+        phone: phone.text.trim().isEmpty ? null : phone.text.trim(),
+        dateOfBirth: dateOfBirth.text.trim().isEmpty
+            ? null
+            : DateTime.tryParse(dateOfBirth.text.trim()),
+        gender: gender.text.trim().isEmpty ? null : gender.text.trim(),
+        address: address.text.trim().isEmpty ? null : address.text.trim(),
+        profilePhotoUrl: profilePhotoUrl.text.trim().isEmpty
+            ? null
+            : profilePhotoUrl.text.trim(),
         isActive: active,
         isOnline: existing?.isOnline ?? false,
         loanCount: existing?.loanCount ?? 0,
@@ -851,6 +1531,11 @@ class _CustomerDialogState extends State<_CustomerDialog> {
     fullName.dispose();
     email.dispose();
     idNumber.dispose();
+    phone.dispose();
+    dateOfBirth.dispose();
+    gender.dispose();
+    address.dispose();
+    profilePhotoUrl.dispose();
     password.dispose();
     super.dispose();
   }
@@ -900,6 +1585,10 @@ class AdminUsersSection extends StatelessWidget {
                             isCurrentUser:
                                 user.id == controller.currentUser.value?.id,
                             onEdit: () => _editUser(context, user),
+                            onDelete:
+                                user.id == controller.currentUser.value?.id
+                                ? null
+                                : () => _deleteUser(context, user),
                           ),
                         )
                         .toList(),
@@ -920,8 +1609,30 @@ class AdminUsersSection extends StatelessWidget {
         canAssignPermissions: controller.can('permissions.manage'),
       ),
     );
-    if (result != null) {
+    if (result != null &&
+        context.mounted &&
+        await _confirmAction(
+          context,
+          title: user == null
+              ? 'Create back-office user?'
+              : 'Save user changes?',
+          message:
+              'Role and permission changes take effect on the user’s next API request.',
+          confirmLabel: user == null ? 'Create user' : 'Save changes',
+        )) {
       await controller.saveUser(result);
+    }
+  }
+
+  Future<void> _deleteUser(BuildContext context, AdminUser user) async {
+    final confirmed = await _confirmDelete(
+      context,
+      title: 'Delete ${user.fullName}?',
+      message:
+          'The back-office account and its active session will be permanently removed.',
+    );
+    if (confirmed) {
+      await controller.deleteUser(user);
     }
   }
 }
@@ -931,11 +1642,13 @@ class _UserCard extends StatelessWidget {
     required this.user,
     required this.isCurrentUser,
     required this.onEdit,
+    this.onDelete,
   });
 
   final AdminUser user;
   final bool isCurrentUser;
   final VoidCallback onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -1006,13 +1719,24 @@ class _UserCard extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: onEdit,
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Edit account'),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Edit account'),
+                ),
+              ),
+              if (onDelete != null) ...[
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  tooltip: 'Delete account',
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline_rounded),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -1061,7 +1785,17 @@ class AdminProfileSection extends StatelessWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: OutlinedButton.icon(
-                  onPressed: controller.signOut,
+                  onPressed: () async {
+                    final confirmed = await _confirmAction(
+                      context,
+                      title: 'Sign out of the admin portal?',
+                      message: 'This device session will be closed.',
+                      confirmLabel: 'Sign out',
+                    );
+                    if (confirmed) {
+                      await controller.signOut();
+                    }
+                  },
                   icon: const Icon(Icons.logout_rounded),
                   label: const Text('Sign out'),
                 ),
@@ -1323,10 +2057,12 @@ class _PackageCard extends StatelessWidget {
     required this.product,
     required this.currency,
     required this.onEdit,
+    required this.onDelete,
   });
   final AdminLoanProduct product;
   final NumberFormat currency;
   final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -1409,10 +2145,25 @@ class _PackageCard extends StatelessWidget {
                   value: product.isActive ? 'Active' : 'Inactive',
                 ),
                 const SizedBox(height: 16),
-                if (onEdit != null)
-                  OutlinedButton(
-                    onPressed: onEdit,
-                    child: const Text('Edit package'),
+                if (onEdit != null || onDelete != null)
+                  Row(
+                    children: [
+                      if (onEdit != null)
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: onEdit,
+                            child: const Text('Edit package'),
+                          ),
+                        ),
+                      if (onDelete != null) ...[
+                        const SizedBox(width: 8),
+                        IconButton.filledTonal(
+                          tooltip: 'Delete package',
+                          onPressed: onDelete,
+                          icon: const Icon(Icons.delete_outline_rounded),
+                        ),
+                      ],
+                    ],
                   ),
               ],
             ),
@@ -1461,9 +2212,14 @@ class _PackageLine extends StatelessWidget {
 }
 
 class _BranchCard extends StatelessWidget {
-  const _BranchCard({required this.branch, required this.onEdit});
+  const _BranchCard({
+    required this.branch,
+    required this.onEdit,
+    required this.onDelete,
+  });
   final AdminBranch branch;
   final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -1503,8 +2259,26 @@ class _BranchCard extends StatelessWidget {
           Text(branch.phone),
           Text(branch.email ?? '—'),
           const SizedBox(height: 14),
-          if (onEdit != null)
-            OutlinedButton(onPressed: onEdit, child: const Text('Edit branch')),
+          if (onEdit != null || onDelete != null)
+            Row(
+              children: [
+                if (onEdit != null)
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: onEdit,
+                      child: const Text('Edit branch'),
+                    ),
+                  ),
+                if (onDelete != null) ...[
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(
+                    tooltip: 'Delete branch',
+                    onPressed: onDelete,
+                    icon: const Icon(Icons.delete_outline_rounded),
+                  ),
+                ],
+              ],
+            ),
         ],
       ),
     );
@@ -1699,7 +2473,9 @@ class _UserDialogState extends State<_UserDialog> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  widget.canAssignPermissions
+                  role == 'ADMIN'
+                      ? 'Administrators are super users and always receive every database permission.'
+                      : widget.canAssignPermissions
                       ? 'Role defaults are preselected. Customize access below.'
                       : 'Only an account with permission-management access can change these values.',
                   style: Theme.of(context).textTheme.bodySmall,
@@ -1722,7 +2498,8 @@ class _UserDialogState extends State<_UserDialog> {
                               value: selectedPermissions.contains(
                                 permission.key,
                               ),
-                              onChanged: widget.canAssignPermissions
+                              onChanged:
+                                  widget.canAssignPermissions && role != 'ADMIN'
                                   ? (value) => setState(() {
                                       if (value == true) {
                                         selectedPermissions.add(permission.key);
@@ -2152,6 +2929,108 @@ class _EmptyState extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _DetailLine extends StatelessWidget {
+  const _DetailLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 7),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 145,
+          child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _RecordStatusChip extends StatelessWidget {
+  const _RecordStatusChip({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = status.toUpperCase();
+    final color = switch (normalized) {
+      'COMPLETED' || 'APPROVED' => const Color(0xFF067647),
+      'REJECTED' || 'FAILED' => const Color(0xFFB42318),
+      _ => const Color(0xFFB54708),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        _friendly(normalized),
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+Future<bool> _confirmDelete(
+  BuildContext context, {
+  required String title,
+  required String message,
+}) => _confirmAction(
+  context,
+  title: title,
+  message: message,
+  confirmLabel: 'Delete',
+  destructive: true,
+);
+
+Future<bool> _confirmAction(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required String confirmLabel,
+  bool destructive = false,
+}) async {
+  return await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: destructive
+                  ? FilledButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    )
+                  : null,
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(confirmLabel),
+            ),
+          ],
+        ),
+      ) ??
+      false;
 }
 
 List<Map<String, dynamic>> _mapList(Object? value) => value is List

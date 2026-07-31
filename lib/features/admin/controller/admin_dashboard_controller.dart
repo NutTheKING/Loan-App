@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:loan_app/core/auth/auth_session.dart';
@@ -32,11 +34,12 @@ class AdminDashboardController extends GetxController {
   final errorMessage = ''.obs;
   final statusFilter = 'ALL'.obs;
   final selectedSection = AdminSection.dashboard.obs;
+  final sidebarCollapsed = false.obs;
   final Rxn<AuthUser> currentUser = Rxn<AuthUser>();
   final overview = <String, dynamic>{}.obs;
   final customers = <AdminCustomer>[].obs;
   final repayments = <Map<String, dynamic>>[].obs;
-  final transactions = <Map<String, dynamic>>[].obs;
+  final transactions = <AdminTransaction>[].obs;
   final report = <String, dynamic>{}.obs;
   final products = <AdminLoanProduct>[].obs;
   final branches = <AdminBranch>[].obs;
@@ -94,6 +97,9 @@ class AdminDashboardController extends GetxController {
   }
 
   Future<void> selectSection(AdminSection section) async {
+    if (!availableSections.contains(section)) {
+      return;
+    }
     selectedSection.value = section;
     await switch (section) {
       AdminSection.dashboard => loadOverview(),
@@ -124,7 +130,14 @@ class AdminDashboardController extends GetxController {
   });
 
   Future<void> loadTransactions() => _load(() async {
-    transactions.assignAll(await _adminApi.transactions());
+    final values = await Future.wait<Object>([
+      _adminApi.transactions(),
+      if (can('customers.read')) _adminApi.customers(),
+    ]);
+    transactions.assignAll(values.first as List<AdminTransaction>);
+    if (values.length > 1) {
+      customers.assignAll(values[1] as List<AdminCustomer>);
+    }
   });
 
   Future<void> loadReport() => _load(() async {
@@ -148,19 +161,129 @@ class AdminDashboardController extends GetxController {
     permissions.assignAll(values[1] as List<AdminPermission>);
   });
 
-  Future<bool> saveProduct(AdminLoanProduct product) =>
-      _save(() => _adminApi.saveLoanProduct(product), loadProducts);
+  Future<bool> saveProduct(AdminLoanProduct product) => _save(
+    () => _adminApi.saveLoanProduct(product),
+    loadProducts,
+    successMessage: product.id.isEmpty
+        ? 'Loan package created.'
+        : 'Loan package updated.',
+  );
 
-  Future<bool> saveBranch(AdminBranch branch) =>
-      _save(() => _adminApi.saveBranch(branch), loadBranches);
+  Future<bool> saveBranch(AdminBranch branch) => _save(
+    () => _adminApi.saveBranch(branch),
+    loadBranches,
+    successMessage: branch.id.isEmpty ? 'Branch created.' : 'Branch updated.',
+  );
 
-  Future<bool> saveCustomer(AdminCustomer customer) =>
-      _save(() => _adminApi.saveCustomer(customer), loadCustomers);
+  Future<bool> saveCustomer(AdminCustomer customer) => _save(
+    () => _adminApi.saveCustomer(customer),
+    loadCustomers,
+    successMessage: customer.id.isEmpty
+        ? 'Customer registered.'
+        : 'Customer updated.',
+  );
 
   Future<bool> saveUser(AdminUser user) => _save(
     () =>
         _adminApi.saveUser(user, includePermissions: can('permissions.manage')),
     loadUsers,
+    successMessage: user.id.isEmpty
+        ? 'Back-office user created.'
+        : 'Back-office user updated.',
+  );
+
+  void toggleSidebar() => sidebarCollapsed.toggle();
+
+  Future<AdminLoan?> loadLoanDetail(String loanId) async {
+    try {
+      return await _adminApi.loanDetail(loanId);
+    } on ApiException catch (error) {
+      _showError('Unable to load application', error.message);
+      return null;
+    }
+  }
+
+  Future<Uint8List?> loadLoanDocument({
+    required String loanId,
+    required String documentId,
+  }) async {
+    try {
+      return Uint8List.fromList(
+        await _adminApi.loanDocument(loanId: loanId, documentId: documentId),
+      );
+    } on ApiException catch (error) {
+      _showError('Unable to load document', error.message);
+      return null;
+    }
+  }
+
+  Future<bool> requestLoanInformation({
+    required AdminLoan loan,
+    required String reason,
+  }) => _save(
+    () => _adminApi.requestLoanInformation(loanId: loan.id, reason: reason),
+    loadLoans,
+    successMessage: 'Information request sent to ${loan.borrower.fullName}.',
+  );
+
+  Future<bool> createDeposit({
+    required String customerId,
+    required double amount,
+    required String description,
+  }) => _save(
+    () => _adminApi.createDeposit(
+      customerId: customerId,
+      amount: amount,
+      description: description,
+    ),
+    loadTransactions,
+    successMessage: 'Customer deposit completed.',
+  );
+
+  Future<bool> reviewTransaction({
+    required AdminTransaction transaction,
+    required String status,
+    String? reason,
+  }) => _save(
+    () => _adminApi.reviewTransaction(
+      transactionId: transaction.id,
+      status: status,
+      reason: reason,
+    ),
+    loadTransactions,
+    successMessage: status == 'COMPLETED'
+        ? 'Transaction approved and completed.'
+        : 'Transaction rejected and customer notified.',
+  );
+
+  Future<bool> deleteTransaction(AdminTransaction transaction) => _save(
+    () => _adminApi.deleteTransaction(transaction.id),
+    loadTransactions,
+    successMessage: 'Transaction request deleted.',
+  );
+
+  Future<bool> deleteCustomer(AdminCustomer customer) => _save(
+    () => _adminApi.deleteCustomer(customer.id),
+    loadCustomers,
+    successMessage: 'Customer account deleted.',
+  );
+
+  Future<bool> deleteProduct(AdminLoanProduct product) => _save(
+    () => _adminApi.deleteLoanProduct(product.id),
+    loadProducts,
+    successMessage: 'Loan package deleted.',
+  );
+
+  Future<bool> deleteBranch(AdminBranch branch) => _save(
+    () => _adminApi.deleteBranch(branch.id),
+    loadBranches,
+    successMessage: 'Branch deleted.',
+  );
+
+  Future<bool> deleteUser(AdminUser user) => _save(
+    () => _adminApi.deleteUser(user.id),
+    loadUsers,
+    successMessage: 'Back-office user deleted.',
   );
 
   Future<void> _load(Future<void> Function() operation) async {
@@ -181,8 +304,9 @@ class AdminDashboardController extends GetxController {
 
   Future<bool> _save(
     Future<void> Function() operation,
-    Future<void> Function() reload,
-  ) async {
+    Future<void> Function() reload, {
+    required String successMessage,
+  }) async {
     if (isSubmitting.value) {
       return false;
     }
@@ -190,6 +314,13 @@ class AdminDashboardController extends GetxController {
     try {
       await operation();
       await reload();
+      Get.snackbar(
+        'Changes saved',
+        successMessage,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF157347),
+        colorText: Colors.white,
+      );
       return true;
     } on ApiException catch (error) {
       Get.snackbar(
@@ -203,6 +334,16 @@ class AdminDashboardController extends GetxController {
     } finally {
       isSubmitting.value = false;
     }
+  }
+
+  void _showError(String title, String message) {
+    Get.snackbar(
+      title,
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFFB42318),
+      colorText: Colors.white,
+    );
   }
 
   Future<void> loadLoans() async {

@@ -4,7 +4,6 @@ import 'package:loan_app/core/auth/auth_session.dart';
 import 'package:loan_app/core/network/api_client.dart';
 import 'package:loan_app/core/network/api_exception.dart';
 import 'package:loan_app/features/auth/data/auth_api.dart';
-import 'package:loan_app/routers/app_router.dart';
 import 'package:loan_app/utils/local_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -28,6 +27,7 @@ class ProfileController extends GetxController {
   final loans = <Map<String, dynamic>>[].obs;
   final transactions = <Map<String, dynamic>>[].obs;
   final isLoading = false.obs;
+  final isSigningOut = false.obs;
   final errorMessage = ''.obs;
   final appVersion = 'Loading…'.obs;
 
@@ -151,19 +151,18 @@ class ProfileController extends GetxController {
     }
   }
 
-  void logout() {
-    Get.defaultDialog(
-      title: 'Sign out',
-      middleText: 'Are you sure you want to sign out on this device?',
-      textCancel: 'Cancel',
-      textConfirm: 'Sign out',
-      confirmTextColor: Colors.white,
-      onConfirm: () async {
-        Get.back();
-        await AuthApi().signOut();
-        appRouter.go('/login');
-      },
-    );
+  Future<void> signOut() async {
+    if (isSigningOut.value) return;
+    isSigningOut.value = true;
+    try {
+      await AuthApi().signOut();
+      user.value = null;
+      loans.clear();
+      transactions.clear();
+      errorMessage.value = '';
+    } finally {
+      isSigningOut.value = false;
+    }
   }
 
   static List<Map<String, dynamic>> _mapList(Object? value) => value is List

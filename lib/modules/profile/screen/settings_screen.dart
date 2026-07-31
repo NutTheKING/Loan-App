@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:loan_app/modules/profile/controller/profile_controller.dart';
 import 'package:loan_app/modules/profile/widget/account_ui.dart';
+import 'package:loan_app/modules/profile/widget/sign_out_dialog.dart';
 
 class SettingsScreen extends StatelessWidget {
   SettingsScreen({super.key});
@@ -93,9 +94,18 @@ class SettingsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 22),
             OutlinedButton.icon(
-              onPressed: controller.logout,
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Sign out'),
+              onPressed: controller.isSigningOut.value
+                  ? null
+                  : () => confirmSignOut(context, controller),
+              icon: controller.isSigningOut.value
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.logout_rounded),
+              label: Text(
+                controller.isSigningOut.value ? 'Signing out...' : 'Sign out',
+              ),
             ),
           ],
         ),

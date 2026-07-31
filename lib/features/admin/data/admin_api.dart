@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:loan_app/core/network/api_client.dart';
 import 'package:loan_app/features/admin/model/admin_loan.dart';
 
@@ -33,6 +35,28 @@ class AdminApi {
     );
   }
 
+  Future<AdminLoan> loanDetail(String loanId) async {
+    final response = await _client.get('/admin/loans/$loanId');
+    return AdminLoan.fromJson(
+      Map<String, dynamic>.from(response['loan'] as Map),
+    );
+  }
+
+  Future<void> requestLoanInformation({
+    required String loanId,
+    required String reason,
+  }) async {
+    await _client.post(
+      '/admin/loans/$loanId/request-information',
+      data: {'reason': reason},
+    );
+  }
+
+  Future<Uint8List> loanDocument({
+    required String loanId,
+    required String documentId,
+  }) => _client.getBytes('/loans/$loanId/documents/$documentId');
+
   Future<Map<String, dynamic>> overview() => _client.get('/admin/overview');
 
   Future<List<AdminCustomer>> customers() async {
@@ -51,11 +75,55 @@ class AdminApi {
     );
   }
 
+  Future<AdminCustomer> customerDetail(String customerId) async {
+    final response = await _client.get('/admin/customers/$customerId');
+    return AdminCustomer.fromJson(
+      Map<String, dynamic>.from(response['customer'] as Map),
+    );
+  }
+
+  Future<void> deleteCustomer(String customerId) =>
+      _client.delete('/admin/customers/$customerId');
+
   Future<List<Map<String, dynamic>>> repayments() =>
       _list('/admin/repayments', 'repayments');
 
-  Future<List<Map<String, dynamic>>> transactions() =>
-      _list('/admin/transactions', 'transactions');
+  Future<List<AdminTransaction>> transactions() async {
+    final response = await _client.get('/admin/transactions');
+    return _typedList(response['transactions'], AdminTransaction.fromJson);
+  }
+
+  Future<void> createDeposit({
+    required String customerId,
+    required double amount,
+    required String description,
+  }) async {
+    await _client.post(
+      '/admin/transactions',
+      data: {
+        'userId': customerId,
+        'amount': amount,
+        'description': description,
+      },
+    );
+  }
+
+  Future<void> reviewTransaction({
+    required String transactionId,
+    required String status,
+    String? reason,
+  }) async {
+    await _client.patch(
+      '/admin/transactions/$transactionId/status',
+      data: {
+        'status': status,
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+      },
+    );
+  }
+
+  Future<void> deleteTransaction(String transactionId) =>
+      _client.delete('/admin/transactions/$transactionId');
 
   Future<Map<String, dynamic>> report() =>
       _client.get('/admin/reports/summary');
@@ -76,6 +144,9 @@ class AdminApi {
     );
   }
 
+  Future<void> deleteLoanProduct(String productId) =>
+      _client.delete('/admin/loan-products/$productId');
+
   Future<List<AdminBranch>> branches() async {
     final response = await _client.get('/admin/branches');
     return _typedList(response['branches'], AdminBranch.fromJson);
@@ -88,6 +159,9 @@ class AdminApi {
     }
     await _client.patch('/admin/branches/${branch.id}', data: branch.toJson());
   }
+
+  Future<void> deleteBranch(String branchId) =>
+      _client.delete('/admin/branches/$branchId');
 
   Future<List<AdminPermission>> permissions() async {
     final response = await _client.get('/admin/permissions');
@@ -115,6 +189,9 @@ class AdminApi {
       data: user.toJson(includePermissions: includePermissions),
     );
   }
+
+  Future<void> deleteUser(String userId) =>
+      _client.delete('/admin/users/$userId');
 
   Future<List<Map<String, dynamic>>> _list(String path, String key) async {
     final response = await _client.get(path);

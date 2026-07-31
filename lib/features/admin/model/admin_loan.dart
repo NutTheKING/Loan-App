@@ -3,31 +3,61 @@ class AdminBorrower {
     required this.id,
     required this.fullName,
     required this.email,
+    this.idNumber,
+    this.phone,
+    this.dateOfBirth,
+    this.gender,
+    this.address,
+    this.profilePhotoUrl,
   });
 
   final String id;
   final String fullName;
   final String email;
+  final String? idNumber;
+  final String? phone;
+  final DateTime? dateOfBirth;
+  final String? gender;
+  final String? address;
+  final String? profilePhotoUrl;
 
   factory AdminBorrower.fromJson(Map<String, dynamic> json) {
     return AdminBorrower(
       id: json['id'] as String? ?? '',
       fullName: json['fullName'] as String? ?? 'Unknown customer',
       email: json['email'] as String? ?? '',
+      idNumber: json['idNumber'] as String?,
+      phone: json['phone'] as String?,
+      dateOfBirth: DateTime.tryParse('${json['dateOfBirth'] ?? ''}'),
+      gender: json['gender'] as String?,
+      address: json['address'] as String?,
+      profilePhotoUrl: json['profilePhotoUrl'] as String?,
     );
   }
 }
 
 class AdminLoanDocument {
-  const AdminLoanDocument({required this.id, required this.kind});
+  const AdminLoanDocument({
+    required this.id,
+    required this.kind,
+    required this.fileName,
+    required this.mimeType,
+    required this.url,
+  });
 
   final String id;
   final String kind;
+  final String fileName;
+  final String mimeType;
+  final String url;
 
   factory AdminLoanDocument.fromJson(Map<String, dynamic> json) {
     return AdminLoanDocument(
       id: json['id'] as String? ?? '',
       kind: json['kind'] as String? ?? 'DOCUMENT',
+      fileName: json['fileName'] as String? ?? 'document',
+      mimeType: json['mimeType'] as String? ?? 'image/png',
+      url: json['url'] as String? ?? '',
     );
   }
 }
@@ -45,6 +75,7 @@ class AdminLoan {
     required this.actualName,
     required this.idCardNumber,
     required this.currentJob,
+    required this.gender,
     required this.stableIncome,
     required this.loanPurpose,
     required this.currentAddress,
@@ -57,6 +88,10 @@ class AdminLoan {
     required this.borrower,
     required this.documents,
     this.reviewerNote,
+    this.submittedAt,
+    this.reviewedAt,
+    this.disbursedAt,
+    this.informationRequestedAt,
   });
 
   final String id;
@@ -70,6 +105,7 @@ class AdminLoan {
   final String actualName;
   final String idCardNumber;
   final String currentJob;
+  final String gender;
   final double stableIncome;
   final String loanPurpose;
   final String currentAddress;
@@ -82,6 +118,10 @@ class AdminLoan {
   final AdminBorrower borrower;
   final List<AdminLoanDocument> documents;
   final String? reviewerNote;
+  final DateTime? submittedAt;
+  final DateTime? reviewedAt;
+  final DateTime? disbursedAt;
+  final DateTime? informationRequestedAt;
 
   bool get isPending => status == 'PENDING';
 
@@ -100,6 +140,7 @@ class AdminLoan {
       actualName: json['actualName'] as String? ?? '',
       idCardNumber: json['idCardNumber'] as String? ?? '',
       currentJob: json['currentJob'] as String? ?? '',
+      gender: json['gender'] as String? ?? '',
       stableIncome: _asDouble(json['stableIncome']),
       loanPurpose: json['loanPurpose'] as String? ?? '',
       currentAddress: json['currentAddress'] as String? ?? '',
@@ -129,6 +170,12 @@ class AdminLoan {
                 .toList()
           : const [],
       reviewerNote: json['reviewerNote'] as String?,
+      submittedAt: DateTime.tryParse('${json['submittedAt'] ?? ''}'),
+      reviewedAt: DateTime.tryParse('${json['reviewedAt'] ?? ''}'),
+      disbursedAt: DateTime.tryParse('${json['disbursedAt'] ?? ''}'),
+      informationRequestedAt: DateTime.tryParse(
+        '${json['informationRequestedAt'] ?? ''}',
+      ),
     );
   }
 
@@ -290,6 +337,11 @@ class AdminCustomer {
     required this.transactionCount,
     required this.createdAt,
     this.idNumber,
+    this.phone,
+    this.dateOfBirth,
+    this.gender,
+    this.address,
+    this.profilePhotoUrl,
     this.lastLoginAt,
     this.lastSeenAt,
     this.password,
@@ -299,6 +351,11 @@ class AdminCustomer {
   final String email;
   final String fullName;
   final String? idNumber;
+  final String? phone;
+  final DateTime? dateOfBirth;
+  final String? gender;
+  final String? address;
+  final String? profilePhotoUrl;
   final bool isActive;
   final bool isOnline;
   final int loanCount;
@@ -319,6 +376,11 @@ class AdminCustomer {
       email: json['email'] as String? ?? '',
       fullName: json['fullName'] as String? ?? '',
       idNumber: json['idNumber'] as String?,
+      phone: json['phone'] as String?,
+      dateOfBirth: DateTime.tryParse('${json['dateOfBirth'] ?? ''}'),
+      gender: json['gender'] as String?,
+      address: json['address'] as String?,
+      profilePhotoUrl: json['profilePhotoUrl'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       isOnline: json['isOnline'] as bool? ?? false,
       loanCount: (counts['loans'] as num?)?.toInt() ?? 0,
@@ -335,9 +397,84 @@ class AdminCustomer {
     'email': email,
     'fullName': fullName,
     'idNumber': idNumber,
+    'phone': phone,
+    'dateOfBirth': dateOfBirth?.toIso8601String(),
+    'gender': gender,
+    'address': address,
+    'profilePhotoUrl': profilePhotoUrl,
     'isActive': isActive,
     if (password != null && password!.isNotEmpty) 'password': password,
   };
+}
+
+class AdminTransaction {
+  const AdminTransaction({
+    required this.id,
+    required this.type,
+    required this.status,
+    required this.amount,
+    required this.currency,
+    required this.description,
+    required this.occurredAt,
+    required this.customerId,
+    required this.customerName,
+    required this.customerEmail,
+    this.loanNumber,
+    this.reviewReason,
+    this.reviewedAt,
+    this.reviewerName,
+    this.profilePhotoUrl,
+  });
+
+  final String id;
+  final String type;
+  final String status;
+  final double amount;
+  final String currency;
+  final String description;
+  final DateTime occurredAt;
+  final String customerId;
+  final String customerName;
+  final String customerEmail;
+  final String? loanNumber;
+  final String? reviewReason;
+  final DateTime? reviewedAt;
+  final String? reviewerName;
+  final String? profilePhotoUrl;
+
+  bool get isPending => status == 'PENDING';
+  bool get canDelete => status == 'PENDING' || status == 'REJECTED';
+
+  factory AdminTransaction.fromJson(Map<String, dynamic> json) {
+    final user = json['user'] is Map
+        ? Map<String, dynamic>.from(json['user'] as Map)
+        : const <String, dynamic>{};
+    final loan = json['loan'] is Map
+        ? Map<String, dynamic>.from(json['loan'] as Map)
+        : const <String, dynamic>{};
+    final reviewer = json['reviewedBy'] is Map
+        ? Map<String, dynamic>.from(json['reviewedBy'] as Map)
+        : const <String, dynamic>{};
+    return AdminTransaction(
+      id: json['id'] as String? ?? '',
+      type: json['type'] as String? ?? 'DEPOSIT',
+      status: json['status'] as String? ?? 'PENDING',
+      amount: AdminLoan._asDouble(json['amount']),
+      currency: json['currency'] as String? ?? 'PHP',
+      description: json['description'] as String? ?? '',
+      occurredAt:
+          DateTime.tryParse('${json['occurredAt'] ?? ''}') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      customerId: user['id'] as String? ?? json['userId'] as String? ?? '',
+      customerName: user['fullName'] as String? ?? 'Unknown customer',
+      customerEmail: user['email'] as String? ?? '',
+      loanNumber: loan['loanNumber'] as String?,
+      reviewReason: json['reviewReason'] as String?,
+      reviewedAt: DateTime.tryParse('${json['reviewedAt'] ?? ''}'),
+      reviewerName: reviewer['fullName'] as String?,
+      profilePhotoUrl: user['profilePhotoUrl'] as String?,
+    );
+  }
 }
 
 class AdminUser {

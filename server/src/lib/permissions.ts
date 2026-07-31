@@ -1,4 +1,4 @@
-import type { UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 
 import { prisma } from './prisma.js';
 
@@ -14,6 +14,7 @@ export const Permissions = {
   productsManage: 'products.manage',
   repaymentsRead: 'repayments.read',
   transactionsRead: 'transactions.read',
+  transactionsManage: 'transactions.manage',
   reportsRead: 'reports.read',
   branchesRead: 'branches.read',
   branchesManage: 'branches.manage',
@@ -22,6 +23,14 @@ export const Permissions = {
 export type PermissionKey = (typeof Permissions)[keyof typeof Permissions];
 
 export async function getEffectivePermissions(userId: string, role: UserRole): Promise<string[]> {
+  if (role === UserRole.ADMIN) {
+    const permissions = await prisma.permission.findMany({
+      select: { key: true },
+      orderBy: { key: 'asc' },
+    });
+    return permissions.map((permission) => permission.key);
+  }
+
   const [roleAssignments, userAssignments] = await Promise.all([
     prisma.rolePermission.findMany({
       where: { role },
@@ -56,6 +65,7 @@ export async function findUserIdsWithPermission(permissionKey: string): Promise<
       AND: [
         {
           OR: [
+            { role: UserRole.ADMIN },
             { role: { in: roleValues } },
             { permissionOverrides: { some: { granted: true, permission: { key: permissionKey } } } },
           ],

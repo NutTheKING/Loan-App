@@ -6,6 +6,11 @@ class AuthUser {
     required this.role,
     required this.permissions,
     this.idNumber,
+    this.phone,
+    this.dateOfBirth,
+    this.gender,
+    this.address,
+    this.profilePhotoUrl,
     this.createdAt,
   });
 
@@ -15,6 +20,11 @@ class AuthUser {
   final String role;
   final List<String> permissions;
   final String? idNumber;
+  final String? phone;
+  final DateTime? dateOfBirth;
+  final String? gender;
+  final String? address;
+  final String? profilePhotoUrl;
   final DateTime? createdAt;
 
   bool hasPermission(String permission) => permissions.contains(permission);
@@ -30,6 +40,11 @@ class AuthUser {
           .whereType<String>()
           .toList(),
       idNumber: json['idNumber'] as String?,
+      phone: json['phone'] as String?,
+      dateOfBirth: DateTime.tryParse('${json['dateOfBirth'] ?? ''}'),
+      gender: json['gender'] as String?,
+      address: json['address'] as String?,
+      profilePhotoUrl: json['profilePhotoUrl'] as String?,
       createdAt: DateTime.tryParse('${json['createdAt'] ?? ''}'),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:loan_app/core/auth/auth_session.dart';
 import 'package:loan_app/core/auth/presence_service.dart';
 import 'package:loan_app/core/network/api_client.dart';
+import 'package:loan_app/core/network/api_exception.dart';
 import 'package:loan_app/core/notifications/push_notification_service.dart';
 import 'package:loan_app/utils/local_storage.dart';
 
@@ -23,16 +24,26 @@ class AuthApi {
   Future<AuthSession> register({
     required String fullName,
     required String email,
+    required String phone,
     required String password,
     required String idNumber,
+    required DateTime dateOfBirth,
+    required String gender,
+    required String address,
+    required bool acceptedTerms,
   }) async {
     final response = await _client.post(
       '/auth/register',
       data: {
         'fullName': fullName,
         'email': email,
+        'phone': phone,
         'password': password,
         'idNumber': idNumber,
+        'dateOfBirth': dateOfBirth.toIso8601String().split('T').first,
+        'gender': gender,
+        'address': address,
+        'acceptedTerms': acceptedTerms,
       },
     );
     return _storeSession(AuthSession.fromJson(response));
@@ -40,21 +51,35 @@ class AuthApi {
 
   Future<void> signOut() async {
     PresenceService.instance.stop();
-    await PushNotificationService.instance.unregisterDevice();
     final refreshToken = await LocalStorage.getStringValue(
       key: LocalStorage.refreshTokenKey,
     );
-    if (refreshToken.isNotEmpty) {
+    try {
+      await PushNotificationService.instance.unregisterDevice().timeout(
+        const Duration(seconds: 3),
+      );
+    } catch (_) {
+      // Push cleanup must never block sign-out.
+    }
+    _client.beginSignOut();
+    await LocalStorage.clearSession();
+    try {
+      if (refreshToken.isEmpty) {
+        return;
+      }
       try {
         await _client.postEmpty(
           '/auth/logout',
           data: {'refreshToken': refreshToken},
+          skipAuthorization: true,
+          skipTokenRefresh: true,
         );
       } catch (_) {
-        // Local credentials are cleared even when a device is offline.
+        // The local session is already cleared when the API is unavailable.
       }
+    } finally {
+      _client.endSignOut();
     }
-    await LocalStorage.clearSession();
   }
 
   Future<bool> hasSession() async {
@@ -76,8 +101,13 @@ class AuthApi {
       await _storeUser(user);
       PresenceService.instance.start();
       return user;
+    } on ApiException catch (error) {
+      if (error.statusCode == 401) {
+        await LocalStorage.clearSession();
+        return null;
+      }
+      rethrow;
     } catch (_) {
-      await LocalStorage.clearSession();
       return null;
     }
   }

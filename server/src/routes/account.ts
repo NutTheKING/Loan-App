@@ -2,38 +2,22 @@ import type { FastifyInstance } from 'fastify';
 import { TransactionStatus, TransactionType } from '@prisma/client';
 import { z } from 'zod';
 
+import { availableBalance, serializeTransaction } from '../lib/account-balance.js';
+import { sendPushToUsers } from '../lib/firebase.js';
+import { findLoanApplicationBlock } from '../lib/loan-eligibility.js';
+import { findUserIdsWithPermission, Permissions } from '../lib/permissions.js';
 import { prisma } from '../lib/prisma.js';
-import { moneyToNumber, serializeLoan } from '../lib/serializers.js';
+import { serializeLoan } from '../lib/serializers.js';
 import { requireAuthentication } from '../plugins/auth.js';
 
-async function availableBalance(userId: string): Promise<number> {
-  const [credits, debits] = await Promise.all([
-    prisma.transaction.aggregate({
-      where: {
-        userId,
-        status: TransactionStatus.COMPLETED,
-        type: { in: [TransactionType.LOAN_DISBURSEMENT, TransactionType.DEPOSIT] },
-      },
-      _sum: { amount: true },
-    }),
-    prisma.transaction.aggregate({
-      where: {
-        userId,
-        status: TransactionStatus.COMPLETED,
-        type: { in: [TransactionType.REPAYMENT, TransactionType.WITHDRAWAL, TransactionType.FEE] },
-      },
-      _sum: { amount: true },
-    }),
-  ]);
-  return Number(credits._sum.amount ?? 0) - Number(debits._sum.amount ?? 0);
-}
+const transactionParams = z.object({ transactionId: z.string().uuid() });
 
 export async function registerAccountRoutes(app: FastifyInstance): Promise<void> {
   app.get('/dashboard', {
     onRequest: [requireAuthentication],
     schema: { tags: ['Account'], summary: 'Get customer dashboard data' },
   }, async (request) => {
-    const [loans, transactions, balance] = await Promise.all([
+    const [loans, transactions, balance, loanApplicationBlock] = await Promise.all([
       prisma.loan.findMany({
         where: { borrowerId: request.user.sub, submittedAt: { not: null } },
         orderBy: { createdAt: 'desc' },
@@ -45,18 +29,22 @@ export async function registerAccountRoutes(app: FastifyInstance): Promise<void>
         take: 10,
       }),
       availableBalance(request.user.sub),
+      findLoanApplicationBlock(request.user.sub),
     ]);
     return {
       loans: loans.map(serializeLoan),
-      transactions: transactions.map((transaction) => ({ ...transaction, amount: moneyToNumber(transaction.amount) })),
-      hasPendingLoan: loans.some((loan) => loan.status === 'PENDING'),
+      transactions: transactions.map(serializeTransaction),
+      hasPendingLoan: loanApplicationBlock?.reason === 'PENDING_REVIEW',
+      hasActiveLoan: loanApplicationBlock !== null,
+      canApplyForLoan: loanApplicationBlock === null,
+      loanApplicationBlock,
       availableBalance: balance,
     };
   });
 
   app.post('/transactions', {
     onRequest: [requireAuthentication],
-    schema: { tags: ['Account'], summary: 'Record a customer deposit or withdrawal' },
+    schema: { tags: ['Account'], summary: 'Request a customer deposit or withdrawal' },
   }, async (request, reply) => {
     const body = z.object({
       type: z.enum([TransactionType.DEPOSIT, TransactionType.WITHDRAWAL]),
@@ -77,7 +65,7 @@ export async function registerAccountRoutes(app: FastifyInstance): Promise<void>
         data: {
           userId: request.user.sub,
           type: body.type,
-          status: TransactionStatus.COMPLETED,
+          status: TransactionStatus.PENDING,
           amount: body.amount,
           description: body.description,
         },
@@ -85,17 +73,57 @@ export async function registerAccountRoutes(app: FastifyInstance): Promise<void>
       await database.auditLog.create({
         data: {
           actorId: request.user.sub,
-          action: `TRANSACTION_${body.type}`,
+          action: `TRANSACTION_${body.type}_REQUESTED`,
           entityType: 'Transaction',
           entityId: created.id,
         },
       });
+      await database.notification.create({
+        data: {
+          userId: request.user.sub,
+          title: `${body.type === TransactionType.DEPOSIT ? 'Deposit' : 'Withdrawal'} request received`,
+          body: 'Your request is pending back-office review.',
+          payload: '/transactions',
+        },
+      });
       return created;
     });
-    return reply.status(201).send({
-      transaction: { ...transaction, amount: moneyToNumber(transaction.amount) },
+    const reviewerIds = (await findUserIdsWithPermission(
+      Permissions.transactionsManage,
+    )).filter((userId) => userId !== request.user.sub);
+    void sendPushToUsers(reviewerIds, {
+      title: `New ${body.type === TransactionType.DEPOSIT ? 'deposit' : 'withdrawal'} request`,
+      body: `${body.description} is waiting for review.`,
+      payload: '/admin',
+    }).catch((error) =>
+      app.log.warn({ err: error }, 'Unable to send transaction review push notification'),
+    );
+    return reply.status(202).send({
+      transaction: serializeTransaction(transaction),
       availableBalance: await availableBalance(request.user.sub),
+      message: 'Your request is pending back-office review.',
     });
+  });
+
+  app.get('/transactions/:transactionId', {
+    onRequest: [requireAuthentication],
+    schema: { tags: ['Account'], summary: 'Get a customer transaction status' },
+  }, async (request, reply) => {
+    const { transactionId } = transactionParams.parse(request.params);
+    const transaction = await prisma.transaction.findFirst({
+      where: { id: transactionId, userId: request.user.sub },
+      include: {
+        loan: { select: { loanNumber: true } },
+        reviewedBy: { select: { fullName: true } },
+      },
+    });
+    if (!transaction) {
+      return reply.code(404).send({
+        error: 'NOT_FOUND',
+        message: 'Transaction not found.',
+      });
+    }
+    return { transaction: serializeTransaction(transaction) };
   });
 
   app.get('/notifications', {

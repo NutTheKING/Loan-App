@@ -48,19 +48,20 @@ class WithdrawController extends GetxController {
     if (!isValid) return false;
     isSubmitting.value = true;
     try {
-      availableBalance.value = await _transactionApi.create(
+      final result = await _transactionApi.create(
         type: 'WITHDRAWAL',
         amount: withdrawAmount.value,
         description: 'Withdrawal via ${selectedMethod.value}',
       );
+      availableBalance.value = result.availableBalance;
       reset();
       if (Get.isRegistered<HomeController>()) {
         await Get.find<HomeController>().loadDashboard();
       }
       Get.snackbar(
-        'Withdrawal completed',
-        'The transaction is now visible in your account history.',
-        backgroundColor: const Color(0xFF12B76A),
+        'Withdrawal pending review',
+        result.message,
+        backgroundColor: const Color(0xFFF79009),
         colorText: Colors.white,
       );
       return true;

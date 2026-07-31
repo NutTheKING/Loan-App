@@ -34,6 +34,9 @@ The API is the source of truth for loan calculations, loan status changes, repay
 - DashLite-inspired admin portal with grouped/collapsible navigation, dashboard, applications, packages, customers, repayments, transactions, reports, branches, users, and profile modules
 - Separate customer registration and back-office user management modules
 - Database-backed roles, permissions, user access overrides, loan packages, branches, deposits, and withdrawals
+- Back-office deposit and withdrawal review with pending, completed, and rejected states plus customer-visible rejection reasons
+- Permission-protected create, view, edit, and delete actions; administrators always receive every database permission
+- Full customer profiles, authenticated identity-document previews, and detailed loan review actions
 - In-app notification inbox with polling fallback and optional Firebase Cloud Messaging delivery
 - Light/dark themes, a consistent three-color design system, motion, and mobile-width customer web screens
 - Private document downloads restricted to the borrower or authorized staff
@@ -107,20 +110,27 @@ For production, configure the API host with:
 Authenticated staff and admin users can use:
 
 - `GET /api/v1/admin/overview`
-- `GET /api/v1/admin/loans`, `PATCH /api/v1/admin/loans/:id/status`
-- `GET|POST|PATCH /api/v1/admin/customers`
+- `GET /api/v1/admin/loans`, `GET /api/v1/admin/loans/:id`, `PATCH /api/v1/admin/loans/:id/status`
+- `POST /api/v1/admin/loans/:id/request-information`
+- `GET|POST|PATCH|DELETE /api/v1/admin/customers`
 - `GET /api/v1/admin/repayments`
-- `GET /api/v1/admin/transactions`
+- `GET|POST /api/v1/admin/transactions`
+- `GET /api/v1/admin/transactions/:id`, `PATCH /api/v1/admin/transactions/:id/status`, `DELETE /api/v1/admin/transactions/:id`
 - `GET /api/v1/admin/reports/summary`
-- `GET|POST|PATCH /api/v1/admin/loan-products`
-- `GET|POST|PATCH /api/v1/admin/branches`
-- `GET|POST|PATCH /api/v1/admin/users`
+- `GET|POST|PATCH|DELETE /api/v1/admin/loan-products`
+- `GET|POST|PATCH|DELETE /api/v1/admin/branches`
+- `GET|POST|PATCH|DELETE /api/v1/admin/users`
 - `GET /api/v1/admin/permissions`
 
-Every admin route checks effective permissions loaded from PostgreSQL. Role defaults can be customized per user from **Users & Permissions** without changing application code.
+Every admin route checks effective permissions loaded from PostgreSQL. Role defaults can be customized per staff user from **Users & Permissions** without changing application code. Administrators are superusers and always receive all available permissions.
 
 Customer accounts are managed under **Customers**. Staff and administrator
 accounts are managed separately under **Users & Permissions**.
+
+Customer deposit and withdrawal requests remain `PENDING` until an authorized
+back-office user approves or rejects them. Pending withdrawals reserve the
+requested balance. Rejections require a reason, which is returned through the
+dashboard API and shown in the customer transaction dialog.
 
 ## Deployment Notes
 

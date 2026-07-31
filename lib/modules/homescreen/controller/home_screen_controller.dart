@@ -11,12 +11,25 @@ class HomeController extends GetxController {
   final loans = <Map<String, dynamic>>[].obs;
   final isLoading = false.obs;
   final errorMessage = ''.obs;
-  final hasPendingLoan = false.obs;
+  final hasActiveLoan = false.obs;
+  final loanBlockReason = ''.obs;
+  final loanBlockMessage = ''.obs;
+  final loanApplicationBlock = Rxn<Map<String, dynamic>>();
   final balance = 0.0.obs;
   final displayName = 'Member'.obs;
 
-  Map<String, dynamic>? get pendingLoan =>
-      loans.firstWhereOrNull((loan) => loan['status'] == 'PENDING');
+  Map<String, dynamic>? get blockingLoan {
+    final block = loanApplicationBlock.value;
+    if (block == null) {
+      return null;
+    }
+    return loans.firstWhereOrNull((loan) => loan['id'] == block['loanId']) ??
+        {
+          'id': block['loanId'],
+          'loanNumber': block['loanNumber'],
+          'status': block['status'],
+        };
+  }
 
   double get availableBalance => balance.value;
 
@@ -46,8 +59,16 @@ class HomeController extends GetxController {
       final response = await _client.get('/dashboard');
       loans.assignAll(_mapList(response['loans']));
       recentTransactions.assignAll(_mapList(response['transactions']));
-      hasPendingLoan.value =
-          response['hasPendingLoan'] == true || pendingLoan != null;
+      final blockValue = response['loanApplicationBlock'];
+      final block = blockValue is Map
+          ? Map<String, dynamic>.from(blockValue)
+          : null;
+      loanApplicationBlock.value = block;
+      hasActiveLoan.value = response['canApplyForLoan'] == false;
+      loanBlockReason.value = block?['reason'] as String? ?? '';
+      loanBlockMessage.value =
+          block?['message'] as String? ??
+          'You cannot apply for another loan at this time.';
       balance.value = _number(response['availableBalance']);
     } on ApiException catch (error) {
       errorMessage.value = error.message;

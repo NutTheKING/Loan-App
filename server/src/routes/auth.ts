@@ -13,7 +13,25 @@ const credentialsSchema = z.object({
 
 const registrationSchema = credentialsSchema.extend({
   fullName: z.string().trim().min(2).max(120),
-  idNumber: z.string().trim().min(4).max(64).optional(),
+  phone: z.string().trim().min(7).max(30).refine(
+    (value) => value.replace(/\D/g, '').length >= 7,
+    'Phone number must contain at least 7 digits.',
+  ),
+  idNumber: z.string().trim().min(4).max(64),
+  dateOfBirth: z.coerce.date(),
+  gender: z.enum(['Male', 'Female', 'Other']),
+  address: z.string().trim().min(5).max(500),
+  acceptedTerms: z.literal(true),
+}).superRefine((value, context) => {
+  const today = new Date();
+  const adultCutoff = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+  if (value.dateOfBirth > adultCutoff) {
+    context.addIssue({
+      code: 'custom',
+      path: ['dateOfBirth'],
+      message: 'Customers must be at least 18 years old.',
+    });
+  }
 });
 
 const credentialsBodySchema = {
@@ -28,12 +46,27 @@ const credentialsBodySchema = {
 
 const registrationBodySchema = {
   ...credentialsBodySchema,
-  required: ['fullName', 'email', 'password'],
+  required: [
+    'fullName',
+    'email',
+    'phone',
+    'password',
+    'idNumber',
+    'dateOfBirth',
+    'gender',
+    'address',
+    'acceptedTerms',
+  ],
   properties: {
     fullName: { type: 'string', minLength: 2, maxLength: 120 },
     email: credentialsBodySchema.properties.email,
+    phone: { type: 'string', minLength: 7, maxLength: 30 },
     password: credentialsBodySchema.properties.password,
     idNumber: { type: 'string', minLength: 4, maxLength: 64 },
+    dateOfBirth: { type: 'string', format: 'date' },
+    gender: { type: 'string', enum: ['Male', 'Female', 'Other'] },
+    address: { type: 'string', minLength: 5, maxLength: 500 },
+    acceptedTerms: { type: 'boolean', enum: [true] },
   },
 } as const;
 
@@ -59,7 +92,11 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
       data: {
         email: body.email,
         fullName: body.fullName,
+        phone: body.phone,
         idNumber: body.idNumber,
+        dateOfBirth: body.dateOfBirth,
+        gender: body.gender,
+        address: body.address,
         passwordHash: await hashPassword(body.password),
       },
     });

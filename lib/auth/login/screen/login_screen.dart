@@ -4,10 +4,32 @@ import 'package:go_router/go_router.dart';
 import 'package:loan_app/auth/login/controller/login_controller.dart';
 import 'package:loan_app/widgets/brand_logo.dart';
 
-class SignInScreen extends StatelessWidget {
-  SignInScreen({super.key});
+class SignInScreen extends StatefulWidget {
+  const SignInScreen({super.key});
 
-  final SignInController controller = Get.put(SignInController());
+  @override
+  State<SignInScreen> createState() => _SignInScreenState();
+}
+
+class _SignInScreenState extends State<SignInScreen> {
+  late final SignInController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    if (Get.isRegistered<SignInController>()) {
+      Get.delete<SignInController>(force: true);
+    }
+    controller = Get.put(SignInController());
+  }
+
+  @override
+  void dispose() {
+    if (Get.isRegistered<SignInController>()) {
+      Get.delete<SignInController>();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,31 +117,29 @@ class SignInScreen extends StatelessWidget {
                     Obx(() {
                       final canSignIn =
                           controller.isValid && !controller.loading.value;
-                      return Listener(
-                        behavior: HitTestBehavior.opaque,
-                        onPointerUp: canSignIn ? (_) => _signIn(context) : null,
-                        child: OutlinedButton.icon(
-                          onPressed: canSignIn ? () => _signIn(context) : null,
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: colors.primary,
-                            foregroundColor: colors.onPrimary,
-                            disabledBackgroundColor: colors.onSurface
-                                .withValues(alpha: 0.12),
-                            disabledForegroundColor: colors.onSurface
-                                .withValues(alpha: 0.38),
-                            side: BorderSide.none,
+                      return OutlinedButton.icon(
+                        onPressed: canSignIn ? () => _signIn(context) : null,
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: colors.primary,
+                          foregroundColor: colors.onPrimary,
+                          disabledBackgroundColor: colors.onSurface.withValues(
+                            alpha: 0.12,
                           ),
-                          icon: controller.loading.value
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.login_rounded),
-                          label: const Text('Sign in'),
+                          disabledForegroundColor: colors.onSurface.withValues(
+                            alpha: 0.38,
+                          ),
+                          side: BorderSide.none,
                         ),
+                        icon: controller.loading.value
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.login_rounded),
+                        label: const Text('Sign in'),
                       );
                     }),
                     const SizedBox(height: 18),
@@ -148,6 +168,9 @@ class SignInScreen extends StatelessWidget {
   Future<void> _signIn(BuildContext context) async {
     final user = await controller.signIn();
     if (user != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Welcome back, ${user.fullName}.')),
+      );
       context.go(user.canAccessAdmin ? '/admin' : '/home');
     }
   }

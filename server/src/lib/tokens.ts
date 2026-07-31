@@ -7,7 +7,20 @@ import { getEffectivePermissions } from './permissions.js';
 
 const refreshTokenLifetimeDays = 30;
 
-export type PublicUser = Pick<User, 'id' | 'email' | 'fullName' | 'idNumber' | 'role' | 'createdAt'> & {
+export type PublicUser = Pick<
+  User,
+  | 'id'
+  | 'email'
+  | 'fullName'
+  | 'idNumber'
+  | 'phone'
+  | 'dateOfBirth'
+  | 'gender'
+  | 'address'
+  | 'profilePhotoUrl'
+  | 'role'
+  | 'createdAt'
+> & {
   permissions: string[];
 };
 
@@ -17,6 +30,11 @@ export async function publicUser(user: User): Promise<PublicUser> {
     email: user.email,
     fullName: user.fullName,
     idNumber: user.idNumber,
+    phone: user.phone,
+    dateOfBirth: user.dateOfBirth,
+    gender: user.gender,
+    address: user.address,
+    profilePhotoUrl: user.profilePhotoUrl,
     role: user.role,
     createdAt: user.createdAt,
     permissions: await getEffectivePermissions(user.id, user.role),

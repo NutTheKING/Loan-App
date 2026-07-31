@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:loan_app/core/config/app_config.dart';
 import 'package:loan_app/core/network/api_exception.dart';
@@ -56,6 +58,17 @@ class ApiClient {
 
   late final Dio _dio;
   Future<String?>? _pendingRefresh;
+  bool _signingOut = false;
+  int _sessionVersion = 0;
+
+  void beginSignOut() {
+    _signingOut = true;
+    _sessionVersion++;
+  }
+
+  void endSignOut() {
+    _signingOut = false;
+  }
 
   Future<Map<String, dynamic>> get(
     String path, {
@@ -90,6 +103,26 @@ class ApiClient {
     }
   }
 
+  Future<Uint8List> getBytes(String path) async {
+    try {
+      final response = await _dio.get<List<int>>(
+        path,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return Uint8List.fromList(response.data ?? const []);
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
+
+  Future<void> delete(String path) async {
+    try {
+      await _dio.delete<void>(path);
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
+
   Future<void> patchEmpty(String path, {Object? data}) async {
     try {
       await _dio.patch<void>(path, data: data);
@@ -110,9 +143,23 @@ class ApiClient {
     }
   }
 
-  Future<void> postEmpty(String path, {Object? data}) async {
+  Future<void> postEmpty(
+    String path, {
+    Object? data,
+    bool skipAuthorization = false,
+    bool skipTokenRefresh = false,
+  }) async {
     try {
-      await _dio.post<void>(path, data: data);
+      await _dio.post<void>(
+        path,
+        data: data,
+        options: Options(
+          extra: {
+            if (skipAuthorization) 'skipAuthorization': true,
+            if (skipTokenRefresh) 'skipTokenRefresh': true,
+          },
+        ),
+      );
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     }
@@ -131,6 +178,9 @@ class ApiClient {
   }
 
   Future<String?> _refreshAccessToken() {
+    if (_signingOut) {
+      return Future<String?>.value(null);
+    }
     final existingRefresh = _pendingRefresh;
     if (existingRefresh != null) {
       return existingRefresh;
@@ -142,6 +192,7 @@ class ApiClient {
   }
 
   Future<String?> _requestAccessTokenRefresh() async {
+    final sessionVersion = _sessionVersion;
     final refreshToken = await LocalStorage.getStringValue(
       key: LocalStorage.refreshTokenKey,
     );
@@ -161,6 +212,9 @@ class ApiClient {
       final nextAccessToken = session['accessToken'] as String?;
       final nextRefreshToken = session['refreshToken'] as String?;
       if (nextAccessToken == null || nextRefreshToken == null) {
+        return null;
+      }
+      if (_signingOut || sessionVersion != _sessionVersion) {
         return null;
       }
       await LocalStorage.storeData(

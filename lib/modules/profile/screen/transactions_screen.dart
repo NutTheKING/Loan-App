@@ -39,6 +39,7 @@ class TransactionsScreen extends StatelessWidget {
                 return Card(
                   margin: const EdgeInsets.only(bottom: 10),
                   child: ListTile(
+                    onTap: () => _showTransaction(context, transaction),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
@@ -81,6 +82,62 @@ class TransactionsScreen extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _showTransaction(
+    BuildContext context,
+    Map<String, dynamic> transaction,
+  ) {
+    final status = '${transaction['status'] ?? 'PENDING'}'.toUpperCase();
+    final type = '${transaction['type'] ?? 'TRANSACTION'}'.toUpperCase();
+    final reason = '${transaction['reviewReason'] ?? ''}'.trim();
+    final message = switch (status) {
+      'PENDING' =>
+        'This ${_friendly(type).toLowerCase()} request is under back-office review. Your available balance reflects any reserved withdrawal amount.',
+      'REJECTED' =>
+        reason.isEmpty
+            ? 'This request was rejected by the back office.'
+            : 'This request was rejected: $reason',
+      'COMPLETED' => 'This transaction has been completed successfully.',
+      _ =>
+        reason.isEmpty
+            ? 'This transaction could not be completed.'
+            : 'This transaction could not be completed: $reason',
+    };
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: Icon(
+          status == 'COMPLETED'
+              ? Icons.check_circle_outline_rounded
+              : status == 'REJECTED' || status == 'FAILED'
+              ? Icons.cancel_outlined
+              : Icons.schedule_rounded,
+          size: 42,
+        ),
+        title: Text('${_friendly(type)} · ${_friendly(status)}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(message),
+            const SizedBox(height: 16),
+            Text(
+              _currency(transaction['amount']),
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 6),
+            Text(_date(transaction['occurredAt'])),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 IconData _transactionIcon(Object? type) => switch ('$type'.toUpperCase()) {
@@ -110,3 +167,10 @@ String _date(Object? value) {
       ? 'Date unavailable'
       : DateFormat('MMM d, y · h:mm a').format(date.toLocal());
 }
+
+String _friendly(Object? value) => '$value'
+    .toLowerCase()
+    .split('_')
+    .where((part) => part.isNotEmpty)
+    .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+    .join(' ');

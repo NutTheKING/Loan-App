@@ -34,6 +34,16 @@ class DepositScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 18),
+            const Card(
+              child: ListTile(
+                leading: Icon(Icons.verified_user_outlined),
+                title: Text('Deposit verification'),
+                subtitle: Text(
+                  'Your deposit request will be pending until the back office verifies it.',
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
             TextField(
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -64,7 +74,7 @@ class DepositScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed: controller.isValid ? controller.submit : null,
+              onPressed: controller.isValid ? () => _confirm(context) : null,
               icon: controller.isSubmitting.value
                   ? const SizedBox(
                       width: 18,
@@ -78,5 +88,31 @@ class DepositScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _confirm(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.add_card_rounded, size: 40),
+        title: const Text('Submit deposit request?'),
+        content: Text(
+          'Submit ₱${controller.amount.value.toStringAsFixed(2)} through ${controller.selectedMethod.value} for verification.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Submit request'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await controller.submit();
+    }
   }
 }

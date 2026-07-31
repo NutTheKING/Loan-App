@@ -129,7 +129,9 @@ class SignatureScreen extends StatelessWidget {
                   : const Icon(Icons.check_rounded),
               label: Text(
                 controller.applicationSubmitting.value
-                    ? 'Submitting securely…'
+                    ? controller.applicationProgress.value.isEmpty
+                          ? 'Submitting securely…'
+                          : controller.applicationProgress.value
                     : 'Submit application',
               ),
             ),
@@ -140,8 +142,61 @@ class SignatureScreen extends StatelessWidget {
   }
 
   Future<void> _submit(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.fact_check_outlined, size: 40),
+        title: const Text('Submit this loan application?'),
+        content: const Text(
+          'Confirm that your personal information, documents, payout account, and signature are correct.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Review again'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Confirm and submit'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
     final submitted = await controller.submitApplication();
-    if (!submitted || !context.mounted) {
+    if (!context.mounted) {
+      return;
+    }
+    if (!submitted) {
+      final correctionRoute = controller.submissionCorrectionRoute.value;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          icon: const Icon(Icons.error_outline_rounded, size: 42),
+          title: const Text('Application not submitted'),
+          content: Text(
+            controller.submissionError.value.isEmpty
+                ? 'Please review your application and try again.'
+                : controller.submissionError.value,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Close'),
+            ),
+            if (correctionRoute.isNotEmpty)
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  context.go(correctionRoute);
+                },
+                child: const Text('Review details'),
+              ),
+          ],
+        ),
+      );
       return;
     }
     if (Get.isRegistered<HomeController>()) {

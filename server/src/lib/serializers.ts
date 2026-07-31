@@ -21,5 +21,21 @@ export function serializeLoan<T extends Record<string, unknown>>(loan: T): T {
       repayment && typeof repayment === 'object' ? serializeLoan(repayment as Record<string, unknown>) : repayment,
     );
   }
+  const documents = serialized['documents'];
+  if (Array.isArray(documents)) {
+    serialized['documents'] = documents.map((document) =>
+      document && typeof document === 'object'
+        ? serializeLoanDocument(document as Record<string, unknown>)
+        : document,
+    );
+  }
   return serialized as T;
+}
+
+export function serializeLoanDocument(
+  document: Record<string, unknown>,
+): Record<string, unknown> {
+  const serialized = { ...document };
+  delete serialized['storageKey'];
+  return serialized;
 }

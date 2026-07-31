@@ -31,12 +31,11 @@ class LoanView extends StatelessWidget {
               const SizedBox(height: 18),
               const LinearProgressIndicator(),
             ],
-            if (controller.hasPendingLoan.value) ...[
+            if (controller.hasActiveLoan.value) ...[
               const SizedBox(height: 18),
               _NoticeCard(
                 icon: Icons.lock_clock_outlined,
-                message:
-                    'Your current application is still under review. You can apply again after a decision.',
+                message: controller.loanBlockMessage.value,
               ),
             ],
             const SizedBox(height: 22),
@@ -55,7 +54,7 @@ class LoanView extends StatelessWidget {
                     (months) => ChoiceChip(
                       label: Text('$months months'),
                       selected: controller.selectedPeriod.value == months,
-                      onSelected: controller.hasPendingLoan.value
+                      onSelected: controller.hasActiveLoan.value
                           ? null
                           : (_) => controller.setPeriod(months),
                     ),
@@ -96,7 +95,7 @@ class LoanView extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
               value: controller.agreeTerms.value,
-              onChanged: controller.hasPendingLoan.value
+              onChanged: controller.hasActiveLoan.value
                   ? null
                   : (value) => controller.agreeTerms.value = value ?? false,
               title: const Text('I agree to the loan terms and conditions.'),
@@ -108,14 +107,16 @@ class LoanView extends StatelessWidget {
             FilledButton.icon(
               onPressed:
                   controller.agreeTerms.value &&
-                      !controller.hasPendingLoan.value &&
+                      !controller.hasActiveLoan.value &&
                       !controller.configurationLoading.value
                   ? () => context.push(LoanRoutes.documents)
                   : null,
               icon: const Icon(Icons.arrow_forward_rounded),
               label: Text(
-                controller.hasPendingLoan.value
-                    ? 'Application pending'
+                controller.hasActiveLoan.value
+                    ? controller.loanBlockReason.value == 'UNPAID_APPROVED_LOAN'
+                          ? 'Existing loan unpaid'
+                          : 'Application pending'
                     : 'Continue to documents',
               ),
             ),
@@ -195,7 +196,7 @@ class _AmountCard extends StatelessWidget {
               min: controller.minAmount,
               max: range > 0 ? controller.maxAmount : controller.minAmount + 1,
               divisions: range > 0 ? 50 : null,
-              onChanged: controller.hasPendingLoan.value
+              onChanged: controller.hasActiveLoan.value
                   ? null
                   : controller.changeAmount,
             ),

@@ -27,10 +27,30 @@ import 'package:loan_app/modules/profile/screen/term_condition_screen.dart';
 import 'package:loan_app/modules/profile/screen/transactions_screen.dart';
 import 'package:loan_app/modules/withdraw/screen/withdraw_screen.dart';
 import 'package:loan_app/modules/withdraw_loan/screen/withdraw_loan_screen.dart';
+import 'package:loan_app/utils/local_storage.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
   debugLogDiagnostics: false,
+  redirect: (context, state) {
+    final path = state.uri.path;
+    final publicRoute = path == '/' || path == '/login' || path == '/register';
+    final signedIn = LocalStorage.hasActiveSession;
+    if (!signedIn && !publicRoute) {
+      return '/login';
+    }
+    if (signedIn && (path == '/login' || path == '/register')) {
+      return LocalStorage.storedPermissions.contains('dashboard.view')
+          ? '/admin'
+          : '/home';
+    }
+    if (signedIn &&
+        path == '/admin' &&
+        !LocalStorage.storedPermissions.contains('dashboard.view')) {
+      return '/home';
+    }
+    return null;
+  },
   routes: [
     GoRoute(
       path: '/',

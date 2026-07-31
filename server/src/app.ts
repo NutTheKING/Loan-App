@@ -32,7 +32,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       }
       callback(null, false);
     },
-    methods: ['GET', 'POST', 'PATCH'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   });
   await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
   await app.register(jwt, { secret: config.JWT_ACCESS_SECRET });

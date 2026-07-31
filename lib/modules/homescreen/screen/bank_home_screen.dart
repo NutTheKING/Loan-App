@@ -57,12 +57,17 @@ class BankHome extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 _QuickActions(
-                  hasPendingLoan: controller.hasPendingLoan.value,
+                  hasActiveLoan: controller.hasActiveLoan.value,
+                  blockReason: controller.loanBlockReason.value,
                   onLoan: () => _openLoan(context, controller),
                 ),
-                if (controller.hasPendingLoan.value) ...[
+                if (controller.hasActiveLoan.value) ...[
                   const SizedBox(height: 18),
-                  _PendingLoanCard(loan: controller.pendingLoan),
+                  _LoanBlockCard(
+                    loan: controller.blockingLoan,
+                    reason: controller.loanBlockReason.value,
+                    message: controller.loanBlockMessage.value,
+                  ),
                 ],
                 const SizedBox(height: 28),
                 _SectionTitle(
@@ -146,13 +151,9 @@ class BankHome extends StatelessWidget {
   }
 
   void _openLoan(BuildContext context, HomeController controller) {
-    if (controller.hasPendingLoan.value) {
+    if (controller.hasActiveLoan.value) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Your current application is pending. You can apply again after review.',
-          ),
-        ),
+        SnackBar(content: Text(controller.loanBlockMessage.value)),
       );
       return;
     }
@@ -339,9 +340,14 @@ class _CardLinesPainter extends CustomPainter {
 }
 
 class _QuickActions extends StatelessWidget {
-  const _QuickActions({required this.hasPendingLoan, required this.onLoan});
+  const _QuickActions({
+    required this.hasActiveLoan,
+    required this.blockReason,
+    required this.onLoan,
+  });
 
-  final bool hasPendingLoan;
+  final bool hasActiveLoan;
+  final String blockReason;
   final VoidCallback onLoan;
 
   @override
@@ -363,10 +369,16 @@ class _QuickActions extends StatelessWidget {
       ),
       Expanded(
         child: _ActionButton(
-          icon: hasPendingLoan
-              ? Icons.schedule_rounded
+          icon: hasActiveLoan
+              ? blockReason == 'UNPAID_APPROVED_LOAN'
+                    ? Icons.payments_outlined
+                    : Icons.schedule_rounded
               : Icons.description_outlined,
-          label: hasPendingLoan ? 'Pending' : 'New loan',
+          label: hasActiveLoan
+              ? blockReason == 'UNPAID_APPROVED_LOAN'
+                    ? 'Loan active'
+                    : 'Pending'
+              : 'New loan',
           onTap: onLoan,
         ),
       ),
@@ -543,10 +555,16 @@ class _CompactFeature extends StatelessWidget {
   );
 }
 
-class _PendingLoanCard extends StatelessWidget {
-  const _PendingLoanCard({required this.loan});
+class _LoanBlockCard extends StatelessWidget {
+  const _LoanBlockCard({
+    required this.loan,
+    required this.reason,
+    required this.message,
+  });
 
   final Map<String, dynamic>? loan;
+  final String reason;
+  final String message;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -557,18 +575,30 @@ class _PendingLoanCard extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const CircleAvatar(child: Icon(Icons.schedule_rounded)),
+        CircleAvatar(
+          child: Icon(
+            reason == 'UNPAID_APPROVED_LOAN'
+                ? Icons.payments_outlined
+                : Icons.schedule_rounded,
+          ),
+        ),
         const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Application under review',
+              Text(
+                reason == 'UNPAID_APPROVED_LOAN'
+                    ? 'Existing loan not fully paid'
+                    : 'Application under review',
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 3),
-              Text('${loan?['loanNumber'] ?? 'Your loan'} is being reviewed.'),
+              Text(
+                message.isEmpty
+                    ? '${loan?['loanNumber'] ?? 'Your loan'} is active.'
+                    : message,
+              ),
             ],
           ),
         ),
@@ -597,6 +627,7 @@ class _TransactionTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
+        onTap: () => _showStatus(context),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
         leading: CircleAvatar(
           backgroundColor: movementColor.withValues(alpha: .14),
@@ -623,6 +654,43 @@ class _TransactionTile extends StatelessWidget {
               : ''}${currency.format(amount)}',
           style: TextStyle(fontWeight: FontWeight.w800, color: movementColor),
         ),
+      ),
+    );
+  }
+
+  Future<void> _showStatus(BuildContext context) {
+    final status = '${transaction['status'] ?? 'PENDING'}'.toUpperCase();
+    final reason = '${transaction['reviewReason'] ?? ''}'.trim();
+    final message = switch (status) {
+      'PENDING' => 'This transaction is under back-office review.',
+      'REJECTED' =>
+        reason.isEmpty
+            ? 'This transaction was rejected.'
+            : 'This transaction was rejected: $reason',
+      'COMPLETED' => 'This transaction was completed successfully.',
+      _ =>
+        reason.isEmpty
+            ? 'This transaction could not be completed.'
+            : 'This transaction could not be completed: $reason',
+    };
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(_friendly(status)),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.push('/transactions');
+            },
+            child: const Text('View transactions'),
+          ),
+        ],
       ),
     );
   }

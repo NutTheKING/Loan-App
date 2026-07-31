@@ -18,7 +18,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   late final AdminDashboardController controller;
   final currency = NumberFormat.currency(symbol: '\u20B1', decimalDigits: 2);
   final dateTime = DateFormat('dd MMM yyyy, HH:mm');
-  bool sidebarCollapsed = false;
 
   @override
   void initState() {
@@ -104,7 +103,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                     IconButton(
                       tooltip: 'Sign out',
-                      onPressed: controller.signOut,
+                      onPressed: _confirmSignOut,
                       icon: const Icon(Icons.logout_rounded),
                     ),
                   ],
@@ -120,12 +119,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   email: user.email,
                   selectedSection: controller.selectedSection.value,
                   sections: controller.availableSections,
-                  collapsed: sidebarCollapsed,
+                  collapsed: controller.sidebarCollapsed.value,
                   unreadCount: controller.notifications.unreadCount.value,
                   onSelectSection: controller.selectSection,
-                  onToggle: () =>
-                      setState(() => sidebarCollapsed = !sidebarCollapsed),
-                  onSignOut: controller.signOut,
+                  onToggle: controller.toggleSidebar,
+                  onSignOut: _confirmSignOut,
                 ),
                 Expanded(child: content),
               ],
@@ -136,7 +134,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Future<void> _openLoan(AdminLoan loan) async {
+  Future<void> _confirmSignOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.logout_rounded, size: 40),
+        title: const Text('Sign out of the admin portal?'),
+        content: const Text(
+          'This device session will be closed and you will return to the login page.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Stay signed in'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await controller.signOut();
+    }
+  }
+
+  Future<void> _openLoan(AdminLoan summary) async {
+    final loan = await controller.loadLoanDetail(summary.id) ?? summary;
+    if (!mounted) {
+      return;
+    }
     final noteController = TextEditingController(text: loan.reviewerNote);
     String? rejectionError;
     final request = await showDialog<_ReviewRequest>(
@@ -163,19 +191,68 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       _DialogSection(
                         title: 'Application',
                         children: [
+                          if ((loan.borrower.profilePhotoUrl ?? '').isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: CircleAvatar(
+                                radius: 38,
+                                backgroundImage: NetworkImage(
+                                  loan.borrower.profilePhotoUrl!,
+                                ),
+                              ),
+                            ),
                           _InfoRow(
                             label: 'Customer',
                             value: loan.borrower.fullName,
                           ),
                           _InfoRow(label: 'Email', value: loan.borrower.email),
                           _InfoRow(
+                            label: 'Phone',
+                            value: loan.borrower.phone ?? 'Not provided',
+                          ),
+                          _InfoRow(
+                            label: 'Gender',
+                            value: loan.borrower.gender ?? loan.gender,
+                          ),
+                          _InfoRow(
+                            label: 'Date of birth',
+                            value: loan.borrower.dateOfBirth == null
+                                ? 'Not provided'
+                                : DateFormat('dd MMM yyyy').format(
+                                    loan.borrower.dateOfBirth!.toLocal(),
+                                  ),
+                          ),
+                          _InfoRow(
                             label: 'Submitted',
-                            value: dateTime.format(loan.createdAt.toLocal()),
+                            value: dateTime.format(
+                              (loan.submittedAt ?? loan.createdAt).toLocal(),
+                            ),
                           ),
                           _InfoRow(label: 'Purpose', value: loan.loanPurpose),
-                          _InfoRow(
-                            label: 'Documents',
-                            value: '${loan.documents.length} uploaded',
+                          const SizedBox(height: 8),
+                          Text(
+                            'Documents (${loan.documents.length})',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: loan.documents
+                                .map(
+                                  (document) => OutlinedButton.icon(
+                                    onPressed: () =>
+                                        _viewDocument(loan, document),
+                                    icon: const Icon(
+                                      Icons.visibility_outlined,
+                                      size: 18,
+                                    ),
+                                    label: Text(
+                                      document.kind.replaceAll('_', ' '),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                           ),
                         ],
                       ),
@@ -221,7 +298,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ),
                           _InfoRow(
                             label: 'Address',
-                            value: loan.currentAddress,
+                            value: loan.borrower.address ?? loan.currentAddress,
                           ),
                         ],
                       ),
@@ -255,7 +332,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           maxLines: 4,
                           decoration: InputDecoration(
                             labelText: 'Reviewer note',
-                            hintText: 'Required when rejecting an application',
+                            hintText:
+                                'Required when rejecting or requesting information',
                             errorText: rejectionError,
                             border: const OutlineInputBorder(),
                           ),
@@ -275,6 +353,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   child: const Text('Close'),
                 ),
                 if (loan.isPending && controller.can('loans.review')) ...[
+                  TextButton.icon(
+                    onPressed: () {
+                      if (noteController.text.trim().isEmpty) {
+                        setDialogState(() {
+                          rejectionError =
+                              'Add a message for the customer first.';
+                        });
+                        return;
+                      }
+                      Navigator.pop(
+                        dialogContext,
+                        _ReviewRequest(
+                          status: 'REQUEST_INFORMATION',
+                          note: noteController.text,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.help_outline_rounded),
+                    label: const Text('Request information'),
+                  ),
                   OutlinedButton.icon(
                     onPressed: () {
                       if (noteController.text.trim().isEmpty) {
@@ -303,7 +401,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                     ),
                     icon: const Icon(Icons.check_rounded),
-                    label: const Text('Approve'),
+                    label: const Text('Approve & disburse'),
                   ),
                 ],
               ],
@@ -315,12 +413,92 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     noteController.dispose();
 
     if (request != null && mounted) {
-      await controller.reviewLoan(
-        loan: loan,
-        status: request.status,
-        reviewerNote: request.note,
-      );
+      final confirmed = await _confirmLoanAction(loan, request);
+      if (!confirmed) {
+        return;
+      }
+      if (request.status == 'REQUEST_INFORMATION') {
+        await controller.requestLoanInformation(
+          loan: loan,
+          reason: request.note,
+        );
+      } else {
+        await controller.reviewLoan(
+          loan: loan,
+          status: request.status,
+          reviewerNote: request.note,
+        );
+      }
     }
+  }
+
+  Future<bool> _confirmLoanAction(
+    AdminLoan loan,
+    _ReviewRequest request,
+  ) async {
+    final action = switch (request.status) {
+      'APPROVED' => 'approve and disburse',
+      'REJECTED' => 'reject',
+      _ => 'request more information for',
+    };
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Confirm loan action'),
+            content: Text(
+              'Are you sure you want to $action ${loan.loanNumber}? The customer will be notified.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Confirm'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  Future<void> _viewDocument(AdminLoan loan, AdminLoanDocument document) async {
+    final bytes = await controller.loadLoanDocument(
+      loanId: loan.id,
+      documentId: document.id,
+    );
+    if (bytes == null || !mounted) {
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 820, maxHeight: 720),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text(document.kind.replaceAll('_', ' ')),
+                subtitle: Text(document.fileName),
+                trailing: IconButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ),
+              Flexible(
+                child: InteractiveViewer(
+                  minScale: .5,
+                  maxScale: 5,
+                  child: Image.memory(bytes, fit: BoxFit.contain),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -373,9 +551,8 @@ class _PortalContent extends StatelessWidget {
           dateTime: dateTime,
           desktop: desktop,
         ),
-        AdminSection.transactions => AdminRecordsSection(
+        AdminSection.transactions => AdminTransactionsSection(
           controller: controller,
-          type: AdminRecordType.transactions,
           currency: currency,
           dateTime: dateTime,
           desktop: desktop,

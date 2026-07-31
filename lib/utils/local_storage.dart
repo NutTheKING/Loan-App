@@ -78,6 +78,15 @@ class LocalStorage {
     ]);
   }
 
+  static bool get hasActiveSession =>
+      (_requirePreferences().getString(accessTokenKey) ?? '').isNotEmpty;
+
+  static String get storedRole =>
+      _requirePreferences().getString(userRoleKey) ?? '';
+
+  static List<String> get storedPermissions =>
+      _requirePreferences().getStringList(userPermissionsKey) ?? const [];
+
   static SharedPreferences _requirePreferences() {
     final preferences = _prefs;
     if (preferences == null) {

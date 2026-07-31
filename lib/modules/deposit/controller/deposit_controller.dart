@@ -23,7 +23,7 @@ class DepositController extends GetxController {
     if (!isValid) return false;
     isSubmitting.value = true;
     try {
-      await _transactionApi.create(
+      final result = await _transactionApi.create(
         type: 'DEPOSIT',
         amount: amount.value,
         description: 'Deposit via ${selectedMethod.value}',
@@ -33,9 +33,9 @@ class DepositController extends GetxController {
         await Get.find<HomeController>().loadDashboard();
       }
       Get.snackbar(
-        'Deposit completed',
-        'Your account balance has been updated.',
-        backgroundColor: const Color(0xFF12B76A),
+        'Deposit pending review',
+        result.message,
+        backgroundColor: const Color(0xFFF79009),
         colorText: Colors.white,
       );
       return true;

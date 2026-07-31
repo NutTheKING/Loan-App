@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:loan_app/core/network/api_exception.dart';
 import 'package:loan_app/features/loans/data/loan_api.dart';
+import 'package:loan_app/modules/loan/loan_routes.dart';
 import 'package:signature/signature.dart';
 
 class LoanController extends GetxController {
@@ -26,8 +27,13 @@ class LoanController extends GetxController {
   final monthlyPayment = 0.0.obs;
   final disbursementDate = DateTime.now().obs;
   final applicationSubmitting = false.obs;
+  final applicationProgress = ''.obs;
   final configurationLoading = false.obs;
-  final hasPendingLoan = false.obs;
+  final hasActiveLoan = false.obs;
+  final loanBlockReason = ''.obs;
+  final loanBlockMessage = ''.obs;
+  final submissionError = ''.obs;
+  final submissionCorrectionRoute = ''.obs;
   final productId = ''.obs;
   final productName = 'Standard Loan'.obs;
   final minimumAmount = 70000.0.obs;
@@ -80,9 +86,10 @@ class LoanController extends GetxController {
     try {
       final values = await Future.wait([
         _loanApi.currentProduct(),
-        _loanApi.hasPendingLoan(),
+        _loanApi.applicationAvailability(),
       ]);
       final product = values[0] as Map<String, dynamic>;
+      final availability = values[1] as LoanApplicationAvailability;
       productId.value = product['id'] as String? ?? '';
       productName.value = product['name'] as String? ?? 'Loan package';
       minimumAmount.value = _number(product['minimumAmount'], 70000);
@@ -96,7 +103,11 @@ class LoanController extends GetxController {
             .whereType<num>()
             .map((term) => term.toInt()),
       );
-      hasPendingLoan.value = values[1] as bool;
+      hasActiveLoan.value = !availability.canApply;
+      loanBlockReason.value = availability.reason ?? '';
+      loanBlockMessage.value =
+          availability.message ??
+          'You cannot apply for another loan at this time.';
       amount.value = amount.value.clamp(minAmount, maxAmount).toDouble();
       if (!allowedTerms.contains(selectedPeriod.value) &&
           allowedTerms.isNotEmpty) {
@@ -160,9 +171,9 @@ class LoanController extends GetxController {
   }
 
   bool get isValid =>
-      beneficiaryBank.value.isNotEmpty &&
-      accountName.value.isNotEmpty &&
-      accountNumber.value.isNotEmpty;
+      beneficiaryBank.value.trim().length >= 2 &&
+      accountName.value.trim().length >= 2 &&
+      accountNumber.value.trim().length >= 4;
 
   Map<String, String> buildModel() {
     return {
@@ -173,15 +184,15 @@ class LoanController extends GetxController {
   }
 
   bool isPersonalInfoValid() {
-    return actualName.value.isNotEmpty &&
-        idCardNo.value.isNotEmpty &&
-        currentJob.value.isNotEmpty &&
-        gender.value.isNotEmpty &&
+    return actualName.value.trim().length >= 2 &&
+        idCardNo.value.trim().length >= 4 &&
+        currentJob.value.trim().length >= 2 &&
+        gender.value.trim().isNotEmpty &&
         stableIncome.value > 0 &&
-        loanPurpose.value.isNotEmpty &&
-        currentAddress.value.isNotEmpty &&
-        guarantorName.value.isNotEmpty &&
-        guarantorPhone.value.isNotEmpty;
+        loanPurpose.value.trim().length >= 2 &&
+        currentAddress.value.trim().length >= 5 &&
+        guarantorName.value.trim().length >= 2 &&
+        guarantorPhone.value.trim().length >= 7;
   }
 
   void clearSignature() {
@@ -202,22 +213,23 @@ class LoanController extends GetxController {
       selfie.value.isNotEmpty;
 
   Future<bool> submitApplication() async {
+    submissionError.value = '';
+    submissionCorrectionRoute.value = '';
     final missingStep = _missingStep();
     if (missingStep != null) {
-      Get.snackbar('Application incomplete', missingStep);
+      submissionError.value = missingStep;
+      submissionCorrectionRoute.value = _correctionRoute();
       return false;
     }
 
     final signature = await exportSignature();
     if (signature == null || signature.isEmpty) {
-      Get.snackbar(
-        'Signature required',
-        'Please add your signature before submitting.',
-      );
+      submissionError.value = 'Please add your signature before submitting.';
       return false;
     }
 
     applicationSubmitting.value = true;
+    applicationProgress.value = 'Creating secure application…';
     try {
       final loanId =
           _submittedLoanId ??
@@ -241,43 +253,43 @@ class LoanController extends GetxController {
           });
       _submittedLoanId = loanId;
 
-      await Future.wait([
-        _loanApi.uploadImage(
-          loanId: loanId,
-          kind: 'ID_FRONT',
-          file: _documents['ID_FRONT']!,
-        ),
-        _loanApi.uploadImage(
-          loanId: loanId,
-          kind: 'ID_BACK',
-          file: _documents['ID_BACK']!,
-        ),
-        _loanApi.uploadImage(
-          loanId: loanId,
-          kind: 'SELFIE',
-          file: _documents['SELFIE']!,
-        ),
-        _loanApi.uploadSignature(loanId: loanId, bytes: signature),
-      ]);
+      applicationProgress.value = 'Uploading ID front…';
+      await _loanApi.uploadImage(
+        loanId: loanId,
+        kind: 'ID_FRONT',
+        file: _documents['ID_FRONT']!,
+      );
+      applicationProgress.value = 'Uploading ID back…';
+      await _loanApi.uploadImage(
+        loanId: loanId,
+        kind: 'ID_BACK',
+        file: _documents['ID_BACK']!,
+      );
+      applicationProgress.value = 'Uploading selfie…';
+      await _loanApi.uploadImage(
+        loanId: loanId,
+        kind: 'SELFIE',
+        file: _documents['SELFIE']!,
+      );
+      applicationProgress.value = 'Uploading signature…';
+      await _loanApi.uploadSignature(loanId: loanId, bytes: signature);
+      applicationProgress.value = 'Finalizing application…';
       await _loanApi.completeApplication(loanId);
       _submittedLoanId = null;
-      hasPendingLoan.value = true;
-      Get.snackbar(
-        'Application submitted',
-        'Your loan application is pending review.',
-      );
+      hasActiveLoan.value = true;
+      loanBlockReason.value = 'PENDING_REVIEW';
+      loanBlockMessage.value =
+          'Your loan application is pending review. Wait for a decision before applying again.';
       return true;
     } on ApiException catch (error) {
-      Get.snackbar('Could not submit application', error.message);
+      submissionError.value = error.message;
       return false;
     } catch (_) {
-      Get.snackbar(
-        'Could not submit application',
-        'Please check your connection and try again.',
-      );
+      submissionError.value = 'Please check your connection and try again.';
       return false;
     } finally {
       applicationSubmitting.value = false;
+      applicationProgress.value = '';
     }
   }
 
@@ -285,8 +297,8 @@ class LoanController extends GetxController {
       value is num ? value.toDouble() : double.tryParse('$value') ?? fallback;
 
   String? _missingStep() {
-    if (hasPendingLoan.value) {
-      return 'You already have an application pending review.';
+    if (hasActiveLoan.value) {
+      return loanBlockMessage.value;
     }
     if (applicationSubmitting.value) {
       return 'Your application is already being submitted.';
@@ -297,16 +309,64 @@ class LoanController extends GetxController {
     if (!allUploaded()) {
       return 'Upload the front and back of your ID and a selfie.';
     }
-    if (!isPersonalInfoValid()) {
-      return 'Complete every field in personal information.';
+    final personalInformationError = _personalInformationError();
+    if (personalInformationError != null) {
+      return personalInformationError;
     }
     if (!isValid) {
-      return 'Complete your payout account information.';
+      return 'Enter a valid payout provider, account holder, and account number with at least 4 characters.';
     }
     if (!signatureController.isNotEmpty) {
       return 'Add your signature before submitting.';
     }
     return null;
+  }
+
+  String? _personalInformationError() {
+    if (actualName.value.trim().length < 2) {
+      return 'Enter your full legal name.';
+    }
+    if (idCardNo.value.trim().length < 4) {
+      return 'Enter an ID card number with at least 4 characters.';
+    }
+    if (currentJob.value.trim().length < 2) {
+      return 'Enter your current job.';
+    }
+    if (gender.value.trim().isEmpty) {
+      return 'Select your gender.';
+    }
+    if (stableIncome.value <= 0) {
+      return 'Enter a stable monthly income greater than zero.';
+    }
+    if (loanPurpose.value.trim().length < 2) {
+      return 'Enter the purpose of this loan.';
+    }
+    if (currentAddress.value.trim().length < 5) {
+      return 'Enter a current address with at least 5 characters.';
+    }
+    if (guarantorName.value.trim().length < 2) {
+      return 'Enter the guarantor full name.';
+    }
+    if (guarantorPhone.value.trim().length < 7) {
+      return 'Enter a guarantor phone number with at least 7 characters.';
+    }
+    return null;
+  }
+
+  String _correctionRoute() {
+    if (!agreeTerms.value) {
+      return LoanRoutes.amount;
+    }
+    if (!allUploaded()) {
+      return LoanRoutes.documents;
+    }
+    if (_personalInformationError() != null) {
+      return LoanRoutes.personalInformation;
+    }
+    if (!isValid) {
+      return LoanRoutes.payoutAccount;
+    }
+    return '';
   }
 
   @override
