@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: loan-app-api
+    runtime: docker
+    plan: free
+    rootDir: server
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        value: https://loan-app1123.web.app
+      - key: HOST
+        value: 0.0.0.0
+      - key: UPLOAD_DIRECTORY
+        value: /tmp/loan-app-uploads
+      - key: MAX_UPLOAD_BYTES
+        value: 10485760
