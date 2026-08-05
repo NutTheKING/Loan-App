@@ -3,6 +3,7 @@ services:
     name: loan-app-api
     runtime: docker
     plan: free
+    region: singapore
     rootDir: server
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
