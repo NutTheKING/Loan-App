@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "prod": "loan-app1123",
+    "default": "loan-app1123"
+  },
+  "targets": {},
+  "etags": {}
+}

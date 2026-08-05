@@ -25,15 +25,9 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -47,29 +41,46 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCPaif4jyDTxPLT4zjEU1KuKuimSwMH70Y',
-    appId: '1:314856867568:web:0f2df80ea93131b8922435',
-    messagingSenderId: '314856867568',
-    projectId: 'loan-app-3d70e',
-    authDomain: 'loan-app-3d70e.firebaseapp.com',
-    storageBucket: 'loan-app-3d70e.firebasestorage.app',
-    measurementId: 'G-9HTQW8E4YZ',
+    apiKey: 'AIzaSyCg3euTUFfVnCrsTVhTpQa0XjIareaU3r8',
+    appId: '1:377342984195:web:2fa5fe8d0152a5f6604e36',
+    messagingSenderId: '377342984195',
+    projectId: 'loan-app1123',
+    authDomain: 'loan-app1123.firebaseapp.com',
+    storageBucket: 'loan-app1123.firebasestorage.app',
+    measurementId: 'G-7WSXBDWKC5',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCNmWoCr5vy3JSQs7R7boFbiZ3oI88N6BU',
-    appId: '1:314856867568:android:9e11dc377b3375de922435',
-    messagingSenderId: '314856867568',
-    projectId: 'loan-app-3d70e',
-    storageBucket: 'loan-app-3d70e.firebasestorage.app',
+    apiKey: 'AIzaSyBREyr6n7A22XfPlXIBqwidt97t64Qjpls',
+    appId: '1:377342984195:android:d7113184353ba9aa604e36',
+    messagingSenderId: '377342984195',
+    projectId: 'loan-app1123',
+    storageBucket: 'loan-app1123.firebasestorage.app',
+  );
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyCvCXBkd5rQ4uxABvRsGVczI2fcO-JjGdg',
+    appId: '1:377342984195:ios:334d30c81ee7df23604e36',
+    messagingSenderId: '377342984195',
+    projectId: 'loan-app1123',
+    storageBucket: 'loan-app1123.firebasestorage.app',
+    iosBundleId: 'com.example.loanApp',
+  );
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyCvCXBkd5rQ4uxABvRsGVczI2fcO-JjGdg',
+    appId: '1:377342984195:ios:334d30c81ee7df23604e36',
+    messagingSenderId: '377342984195',
+    projectId: 'loan-app1123',
+    storageBucket: 'loan-app1123.firebasestorage.app',
+    iosBundleId: 'com.example.loanApp',
   );
 
-  static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDQvWBgQ8OrXiASIrT4Buzj_2JKXZUcCp0',
-    appId: '1:314856867568:ios:fa998a89474b1d22922435',
-    messagingSenderId: '314856867568',
-    projectId: 'loan-app-3d70e',
-    storageBucket: 'loan-app-3d70e.firebasestorage.app',
-    iosBundleId: 'com.example.loanApp',
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyCg3euTUFfVnCrsTVhTpQa0XjIareaU3r8',
+    appId: '1:377342984195:web:d570ec659cea2988604e36',
+    messagingSenderId: '377342984195',
+    projectId: 'loan-app1123',
+    authDomain: 'loan-app1123.firebaseapp.com',
+    storageBucket: 'loan-app1123.firebasestorage.app',
+    measurementId: 'G-10GP49L23L',
   );
 }

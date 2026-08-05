@@ -54,7 +54,6 @@ generated_plugin_registrant.dart
 **/.cxx/
 
 # Web
-lib/generated_plugin_registrant.dart
 
 # Logs
 *.log

@@ -23,20 +23,42 @@ void main() async {
   if (!kIsWeb) {
     await AndroidNotificationHelper.instance.init();
   }
-  await PushNotificationService.instance.initialize();
+  try {
+    await PushNotificationService.instance.initialize();
+  } catch (error) {
+    debugPrint('Skip push notification setup: $error');
+  }
 
-  await dotenv.load();
+  await _tryLoadDotEnv();
   _setupDevicePreference();
   Get.put(InternetConnectionController());
   runApp(const MyApp());
 }
 
+/// Loads the local `.env` development file. A missing file is not fatal:
+/// `AppConfig` falls back to the `API_BASE_URL` compile-time define and then
+/// to the localhost default. On web builds the dotfile may not be bundled,
+/// so a fetch failure here must never block startup.
+Future<void> _tryLoadDotEnv() async {
+  try {
+    await dotenv.load();
+  } catch (error) {
+    debugPrint('Skip loading .env: $error');
+  }
+}
+
 Future<void> _handleInitialMessage() async {
-  final RemoteMessage? message = await FirebaseMessaging.instance
-      .getInitialMessage();
-  final String? payload = message?.data['payload'];
-  if (payload != null) {
-    appRouter.go(payload);
+  try {
+    final RemoteMessage? message = await FirebaseMessaging.instance
+        .getInitialMessage();
+    final String? payload = message?.data['payload'];
+    if (payload != null) {
+      appRouter.go(payload);
+    }
+  } catch (error) {
+    // A missing or misconfigured messaging service worker on web must never
+    // block app startup. Push notifications stay optional.
+    debugPrint('Skip initial push payload: $error');
   }
 }
 
